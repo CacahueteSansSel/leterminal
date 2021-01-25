@@ -358,6 +358,28 @@ void command_useradd(SecuredStringList* args) {
     }
 }
 
+void command_id(SecuredStringList* args) {
+    User* usr = UsersRepository::sharedRepository()->current();
+
+    SecuredString* levelStr;
+    if (usr->level() == ExecutionLevel::Low) levelStr = SecuredString::fromBufferUnsafe("low");
+    else if (usr->level() == ExecutionLevel::Normal) levelStr = SecuredString::fromBufferUnsafe("normal");
+    else if (usr->level() == ExecutionLevel::High) levelStr = SecuredString::fromBufferUnsafe("high");
+    else if (usr->level() == ExecutionLevel::Root) levelStr = SecuredString::fromBufferUnsafe("root");
+    else levelStr = SecuredString::fromBufferUnsafe("unknown");
+    Terminal::Screen::write(" |  uid=");
+    Terminal::Screen::writeChar(intToString(usr->uid()));
+    Terminal::Screen::write("(");
+    Terminal::Screen::write(usr->name());
+    Terminal::Screen::write(")");
+    Terminal::Screen::write(" level=");
+    Terminal::Screen::writeChar(intToString((int)usr->level()));
+    Terminal::Screen::write("(");
+    Terminal::Screen::write(*levelStr);
+    Terminal::Screen::write(")");
+    Terminal::Screen::newLine();
+}
+
 void command_users(SecuredStringList* args) {
     bool detailed = args->count() > 1 && args->at(1) == *SecuredString::fromBufferUnsafe("-d");
     for (int i = 0; i < UsersRepository::sharedRepository()->count(); i++) {

@@ -112,6 +112,10 @@ static KDPoint screenCursorPosition() {
 }
 
 static void drawChar(KDContext* ctx, char c, KDColor back, KDColor color, KDPoint pos) {
+    // Just to be sure ;)
+    if (c == '\0' || c == 0) {
+        return;
+    }
     for (int y = 0; y < 12; y++) {
         for (int x = 0; x < 8; x++) {
             uint8_t alpha = Font::generatedGlyphData[(uint8_t)(c) * 96 + (y * 8 + x)];
