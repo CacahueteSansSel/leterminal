@@ -5,13 +5,12 @@
 #include "stringx.h"
 #include "commands.h"
 #include "software/kilo.h"
-#include "local_commands.h"
 #include <poincare/init.h>
 #include <poincare/exception_checkpoint.h>
 #include "system/users.h"
 #include "system/power.h"
 
-#define DEFCMD(cmdname, cmdfunc) else if (check(cmd, cmdname)) { cmdfunc(argList); } \
+#include "local_commands.h"
 
 void terminal_main(int argc, const char * const argv[]) {
     Terminal::isLaunchedFromFirmware = argc > 0 && check(argv[0], "-firm");
@@ -46,9 +45,7 @@ void terminal_main(int argc, const char * const argv[]) {
             if (check(cmd, "exit")) {
                 return;
             } 
-            DEFCMD("chometon", command_chometon)
-            DEFCMD("karatas", command_karatas)
-            DEFCMD("sandy", command_sandy)
+            LOCAL_COMMANDS
             DEFCMD("uname", command_uname)
             DEFCMD("echo", command_echo)
             DEFCMD("clear", command_clear)
@@ -64,11 +61,11 @@ void terminal_main(int argc, const char * const argv[]) {
             DEFCMD("args", command_args)
             DEFCMD("chars", command_chars)
             DEFCMD("poincare", command_poincare)
-            DEFCMD("matrix", command_matrix)
             //DEFCMD("kilo", command_kilo)
             DEFCMD("su", command_su)
             DEFCMD("useradd", command_useradd)
             DEFCMD("users", command_users)
+            DEFCMD("id", command_id)
             else {
                 if (argList->at(0).size() == 0) continue;
                 Terminal::Screen::write("le: ");
