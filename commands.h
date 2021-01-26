@@ -12,6 +12,7 @@
 #include <poincare/init.h>
 #include <poincare/exception_checkpoint.h>
 #include "system/users.h"
+#include "firmware.h"
 
 void command_uname(SecuredStringList* args) {
     if (check(args->at(1), "-a")) {
@@ -19,10 +20,12 @@ void command_uname(SecuredStringList* args) {
         //Kernel name - network node hostname - kernel release date - kernel version - machine hard name - hard platform - OS
         Terminal::Screen::write("Ion, numworks, ");
         Terminal::Screen::write(Ion::softwareVersion());
-        Terminal::Screen::write(", Numworks Calculator, ARM, Sigma ");
-        Terminal::Screen::write(Sigmap::sigmaBranch);
+        Terminal::Screen::write(", Numworks Calculator, ARM, ");
+        Terminal::Screen::write(FIRMWARE_NAME);
         Terminal::Screen::write(" ");
-        Terminal::Screen::write(Sigmap::sigmaVersion);
+        Terminal::Screen::write(FIRMWARE_BRANCH);
+        Terminal::Screen::write(" ");
+        Terminal::Screen::write(FIRMWARE_VERSION);
     } else if (check(args->at(1), "-s")) {
         Terminal::Screen::write("Ion");
     } else if (check(args->at(1), "-n")) {
@@ -36,10 +39,11 @@ void command_uname(SecuredStringList* args) {
     } else if (check(args->at(1), "-p") || check(args->at(1), "-i")) {
         Terminal::Screen::write("ARM");
     } else if (check(args->at(1), "-o")) {
-        Terminal::Screen::write("Sigma ");
-        Terminal::Screen::write(Sigmap::sigmaBranch);
+        Terminal::Screen::write(FIRMWARE_NAME);
         Terminal::Screen::write(" ");
-        Terminal::Screen::write(Sigmap::sigmaVersion);
+        Terminal::Screen::write(FIRMWARE_BRANCH);
+        Terminal::Screen::write(" ");
+        Terminal::Screen::write(FIRMWARE_VERSION);
     } else {
         Terminal::Screen::write("Ion");
     }
@@ -61,7 +65,7 @@ void command_clear(SecuredStringList* args) {
 void command_history(SecuredStringList* args) {
     if (args->count() == 1) {
         for (int i = 0; i < Terminal::Screen::history->count(); i++) {
-            Terminal::Screen::write(Terminal::Screen::history->pointer() == i ? " *| " : "  | ");
+            Terminal::Screen::write(Terminal::Screen::history->pointer() == i ? "->| " : "  | ");
             Terminal::Screen::write(Terminal::Screen::history->at(i));
             Terminal::Screen::newLine();
         }
@@ -408,6 +412,30 @@ void command_users(SecuredStringList* args) {
         }
     }
     if (!detailed) Terminal::Screen::newLine();
+}
+
+void command_neofetch(SecuredStringList* args) {
+    Terminal::Screen::writeBitmap(neofetch_logo, NEOFETCH_LOGO_WIDTH, NEOFETCH_LOGO_HEIGHT, FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::writeLn("@numworks", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::writeLn("-----------------------", KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("Model: ", FIRMWARE_MAIN_COLOR);
+    // Add a way, if possible, to fetch automatically the calculator revision
+    Terminal::Screen::writeLn("Numworks Calculator", KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("OS: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::writeLn(FIRMWARE_NAME, KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("Kernel: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::write("Ion ", KDColorWhite);
+    Terminal::Screen::writeLn(Ion::softwareVersion(), KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("Terminal: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::writeLn("L.E. Terminal ", KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
 }
 
 #endif

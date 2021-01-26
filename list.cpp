@@ -46,23 +46,34 @@ SecuredString SecuredStringList::at(int index) {
     return *list[index];
 }
 
+void StringPositionalList::shift() {
+    for (int i = 0; i < counter; i++) {
+        int finalIndex = i-1;
+        if (finalIndex >= 0) list[finalIndex] = list[i];
+    }
+}
+
 void StringPositionalList::add(char* element, int size) {
-    if (counter >= LIST_MAX_COUNT) return;
+    if (counter >= LIST_MAX_COUNT) {
+        shift();
+    }
 
     list[counter] = new SecuredString(size, element);
     counter++;
 }
 
 void StringPositionalList::copy(char* element, int size) {
-    if (counter >= LIST_MAX_COUNT) return;
+    if (counter >= LIST_MAX_COUNT) {
+        shift();
+    }
     
     list[counter] = SecuredString::copy(size, element);
+    m_pointer = counter;
     counter++;
 }
 
 SecuredString StringPositionalList::at(int index) {
     if (index >= count()) return *SecuredString::empty();
-    if (counter >= LIST_MAX_COUNT) return *SecuredString::empty();
 
     return *list[index];
 }
