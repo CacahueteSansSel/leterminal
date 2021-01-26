@@ -9,8 +9,12 @@
 #include <poincare/exception_checkpoint.h>
 #include "system/users.h"
 #include "system/power.h"
+#include "firmware.h"
 
 #include "local_commands.h"
+#ifndef LOCAL_COMMANDS
+#define LOCAL_COMMANDS 
+#endif
 
 void terminal_main(int argc, const char * const argv[]) {
     Terminal::isLaunchedFromFirmware = argc > 0 && check(argv[0], "-firm");
@@ -20,12 +24,14 @@ void terminal_main(int argc, const char * const argv[]) {
 
     Ion::Display::pushRectUniform(KDRect(0, 0, 320, 240), KDColorBlack);
 
-    Terminal::Screen::writeLn("L.E. Terminal", KDColorGreen);
+    Terminal::Screen::write("L.E. Terminal ", KDColorGreen);
+    Terminal::Screen::writeLn(TERMINAL_VERSION, KDColorGreen);
     Terminal::Screen::writeLn("(Lightweight Emulated)", KDColorGreen);
-    Terminal::Screen::write("Sigma ", KDColorWhite);
-    Terminal::Screen::write(Sigmap::sigmaBranch, Sigmap::sigmaBranchColor);
+    Terminal::Screen::write(FIRMWARE_NAME, KDColorWhite);
     Terminal::Screen::write(" ", KDColorWhite);
-    Terminal::Screen::write(Sigmap::sigmaVersion, KDColorWhite);
+    Terminal::Screen::write(FIRMWARE_BRANCH, FIRMWARE_BRANCH_COLOR);
+    Terminal::Screen::write(" ", KDColorWhite);
+    Terminal::Screen::write(FIRMWARE_VERSION, KDColorWhite);
     Terminal::Screen::newLine();
 
     char buffer[256];
@@ -66,6 +72,7 @@ void terminal_main(int argc, const char * const argv[]) {
             DEFCMD("useradd", command_useradd)
             DEFCMD("users", command_users)
             DEFCMD("id", command_id)
+            DEFCMD("neofetch", command_neofetch)
             else {
                 if (argList->at(0).size() == 0) continue;
                 Terminal::Screen::write("le: ");
@@ -83,12 +90,6 @@ void terminal_main(int argc, const char * const argv[]) {
         if (scan.keyDown(Ion::Keyboard::Key::OnOff)) { // Its ONOFF, NOT POWER !!!!!!!
             terminalSleep();
             Terminal::Screen::redraw(true);
-        }
-
-        if (Terminal::isLaunchedFromFirmware) {
-            if (scan.keyDown(Ion::Keyboard::Key::Back)) { // Break if back is hit
-                return;
-            }
         }
         
         // Update the LED

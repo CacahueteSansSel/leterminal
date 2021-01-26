@@ -367,11 +367,21 @@ static void clear() {
     updateTextStatus();
 }
 
+static void writeBitmap(bool* bitmap, int width, int height, KDColor color) {
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++) {
+            if (bitmap[y * width + x]) setColorsAt(x, Terminal::Screen::posY + y, color, color);
+            else setColorsAt(x, Terminal::Screen::posY + y, KDColorBlack, KDColorBlack);
+        }
+    }
+    posX += width;
+}
+
 static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings = nullptr) {
 
     if (settings == nullptr) settings = ReadLineSettings::defaultSettings();
     if (history == 0) history = new StringPositionalList();
-    int localHistoryPtr = 0;
     int ptr = 0;
     int cursor = 0; //0-50 : invisible - 50-100 : visible
     int originX = posX;
@@ -383,7 +393,7 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         && (lastKey != (uint8_t)Ion::Keyboard::Key::OK)) {
             buffer[ptr] = '\0';
             lastKey = (uint8_t)Ion::Keyboard::Key::OK;
-            history->copy(buffer, ptr);
+            if (settings->isHistoryEnabled()) history->copy(buffer, ptr);
             break;
         } else if (!scan.keyDown(Ion::Keyboard::Key::OK) && !scan.keyDown(Ion::Keyboard::Key::EXE) && (lastKey == (uint8_t)Ion::Keyboard::Key::OK)) {
             lastKey = 0;
@@ -417,6 +427,7 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             ptr = history->selected().size();
             history->decPointer();
             lastKey = (uint8_t)Ion::Keyboard::Key::Down;
+            updateTextStatus();
 
             redraw();
         }
@@ -434,6 +445,7 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             ptr = history->selected().size();
             history->incPointer();
             lastKey = (uint8_t)Ion::Keyboard::Key::Up;
+            updateTextStatus();
 
             redraw();
         }
@@ -452,7 +464,7 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         }
 
         if (scan.keyDown(Ion::Keyboard::Key::Right) && lastKey != (uint8_t)Ion::Keyboard::Key::Right) {
-            if (ptr >= strlen(buffer)) continue;
+            if (ptr >= strlen(buffer)-1) continue;
             ptr++;
             incrementPos();
             lastKey = (uint8_t)Ion::Keyboard::Key::Right;
@@ -495,11 +507,13 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         LMAP(Ion::Keyboard::Key::Toolbox, 't', 't', '"', '"');
         LMAP(Ion::Keyboard::Key::Var, 'v', 'v', ';', ';');
         LMAP(Ion::Keyboard::Key::XNT, 'x', 'x', ':', ':');
+        LMAPSTR(Ion::Keyboard::Key::EE, "*10^", "*10^", "*10^", "*10^");
+        LMAPSTR(Ion::Keyboard::Key::Ans, "ans", "ans", "ans", "ans");
 
         if (scan.keyDown(Ion::Keyboard::Key::Backspace) && lastKey != (uint8_t)Ion::Keyboard::Key::Backspace) {
             if (Terminal::Keyboard::isAlpha()) {
                 buffer[ptr] = '%'; 
-                writeChar('%'); 
+                writeChar(settings->doHideText() ? ':' : '%'); 
                 ptr++;
                 redraw();
                 lastKey = (uint8_t)Ion::Keyboard::Key::Backspace;

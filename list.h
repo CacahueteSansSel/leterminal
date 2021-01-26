@@ -1,7 +1,7 @@
 #ifndef NUMBOOT_LIST
 #define NUMBOOT_LIST
 
-#define LIST_MAX_COUNT 16
+#define LIST_MAX_COUNT 64
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -81,6 +81,7 @@ class StringPositionalList {
     SecuredString selected() const { return m_pointer >= count() ? *SecuredString::empty() : *list[m_pointer]; }
     int pointer() const { return m_pointer; }
 
+    void shift();
     void add(char* element, int size);
     void copy(char* element, int size);
     SecuredString at(int index);
