@@ -1,5 +1,5 @@
-#ifndef SIGMA_TERMINAL_SCREEN
-#define SIGMA_TERMINAL_SCREEN
+#ifndef TERMINAL_SCREEN
+#define TERMINAL_SCREEN
 #include <kandinsky.h>
 #include <string.h>
 #include <ion.h>
@@ -136,9 +136,8 @@ static void redraw(bool complete = false) {
             if (cell == screenInternal[y * CharWidth + x] && !complete) continue;
             screenInternal[y * CharWidth + x] = cell;
             KDRect screenRect = KDRect(x * 8, y * 12, 8, 12);
-            ctx->fillRect(screenRect, KDColor(cell.back));
-            //ctx->drawString(cell.character, screenRect.topLeft(), KDFont::SmallFont, KDColor(cell.fore), KDColor(cell.back), 1);
-            drawChar(ctx, cell.character[0], KDColor(cell.back), KDColor(cell.fore), screenRect.topLeft());
+            ctx->fillRect(screenRect, KDColor::RGB16(cell.back));
+            drawChar(ctx, cell.character[0], KDColor::RGB16(cell.back), KDColor::RGB16(cell.fore), screenRect.topLeft());
         }
     }
 }
@@ -179,7 +178,7 @@ static void clear(int count) {
 }
 
 static KDColor getBackColorAt(int x, int y) {
-    return Screen[y * CharWidth + x].back;
+    return KDColor::RGB16(Screen[y * CharWidth + x].back);
 }
 
 static void scrollDown() {

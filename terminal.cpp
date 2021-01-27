@@ -1,6 +1,5 @@
 #include "terminal.h"
 #include "../../ion/include/ion.h"
-#include <sigmap.h>
 #include "list.h"
 #include "stringx.h"
 #include "commands.h"

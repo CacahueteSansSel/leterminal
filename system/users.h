@@ -1,5 +1,5 @@
-#ifndef SIGMA_TERMINAL_USERS
-#define SIGMA_TERMINAL_USERS
+#ifndef TERMINAL_USERS
+#define TERMINAL_USERS
 #include "../stringx.h"
 
 #define MAX_USER_COUNT 32

@@ -1,5 +1,5 @@
-#ifndef LET_STARTUP
-#define LET_STARTUP
+#ifndef TERMINAL_STARTUP
+#define TERMINAL_STARTUP
 #include <ion.h>
 #include <kandinsky.h>
 #include "terminal.h"

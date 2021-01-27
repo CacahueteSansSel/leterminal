@@ -1,9 +1,8 @@
-#ifndef SIGMA_TERMINAL_COMMANDS
-#define SIGMA_TERMINAL_COMMANDS
+#ifndef TERMINAL_COMMANDS
+#define TERMINAL_COMMANDS
 #include "list.h"
 #include "termscreen.h"
 #include "stringx.h"
-#include <sigmap.h>
 #include "../code/script_template.h"
 #include "../code/script.h"
 #include <poincare_layouts.h>
@@ -153,9 +152,22 @@ void command_ion(SecuredStringList* args) {
     }
 }
 
+// The ls command don't work anymore for every file, because it was based on a modification of Ion
+// that is not present in every firmware (this terminal was firstly designed for a
+// custom firmware called Sigma that integrated this modification)
+// We will be working on a fix later, but for now a file extension must be specified
+// The default file extension is .py
 void command_ls(SecuredStringList* args) {
-    for (char* p : *Ion::Storage::sharedStorage()) {
-        Terminal::Screen::write(p+2);
+    SecuredString ext = *SecuredString::fromBufferUnsafe("py");
+
+    if (args->count() > 1) {
+        ext = args->at(2);
+    }
+
+    int fileCount = Ion::Storage::sharedStorage()->numberOfRecordsWithExtension(ext.c_str());
+    for (int i = 0; i < fileCount; i++) {
+        auto record = Ion::Storage::sharedStorage()->recordWithExtensionAtIndex(ext.c_str(), i);
+        Terminal::Screen::write(record.fullName()+2);
         Terminal::Screen::write(" ");
     }
     Terminal::Screen::newLine();
@@ -437,7 +449,7 @@ void command_neofetch(SecuredStringList* args) {
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write("Terminal: ", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn("L.E. Terminal ", KDColorWhite);
-    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::posX = 0;
     Terminal::Screen::posY = y + NEOFETCH_LOGO_HEIGHT;
 }
 

@@ -1,5 +1,5 @@
-#ifndef SIGMA_TERMINAL
-#define SIGMA_TERMINAL
+#ifndef TERMINAL_H
+#define TERMINAL_H
 #include "termscreen.h"
 
 #define DEFCMD(cmdname, cmdfunc) else if (check(cmd, cmdname)) { cmdfunc(argList); }
