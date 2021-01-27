@@ -41,7 +41,8 @@ Here are the implemented commands :
     + `-r` : reboot the calculator (not working for the moment)
     + `-b` : shows the battery level as a nice bar
     + `-u` : shows USB infos
-+ `ls`, `rm`, `touch`, `cp`, `cat` : same as UNIX
++ `rm`, `touch`, `cp`, `cat` : same as UNIX
++ `ls` : list all files in the Numworks' storage (because of a limitation within Ion, `ls` needs a file extension to list files, default is set to `py`)
 + `pyscr` : creates the default samples Python scripts in *Epsilon* (i.e. `squares.py`, etc...)
 + `args` : displays every arguments on screen, including the command
 + `chars` : displays every char in the range 0-255 (for debug purposes)
