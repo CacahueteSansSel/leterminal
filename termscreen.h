@@ -494,7 +494,7 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         LMAPSTR(Ion::Keyboard::Key::Sine, "sin(", "asin(", "g", "G");
         LMAPSTR(Ion::Keyboard::Key::Cosine, "cos(", "acos(", "h", "H");
         LMAPSTR(Ion::Keyboard::Key::Tangent, "tan(", "atan(", "i", "I");
-        LMAP(Ion::Keyboard::Key::Pi, 'π', '=', 'j', 'J');
+        LMAPSTR(Ion::Keyboard::Key::Pi, "π", "=", "j", "J");
         LMAPSTR(Ion::Keyboard::Key::Sqrt, "sqrt(", "<", "k", "K");
         LMAPSTR(Ion::Keyboard::Key::Square, "^2", ">", "l", "L");
         LMAPSTR(Ion::Keyboard::Key::Exp, "e^", "[", "a", "A");

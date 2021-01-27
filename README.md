@@ -52,6 +52,8 @@ Here are the implemented commands :
 
 ## Building instructions
 
+*Note : the terminal does not support the simulator*
+
 ### As a "*subfirmware*"
 If you want to use *let* as a "subfirmware" (kind of a firmware in a firmware), follow these steps : 
 
