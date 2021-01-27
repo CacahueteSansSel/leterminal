@@ -83,8 +83,8 @@ class UsersRepository {
         if (m_alreadyAddedDefaultUsers) return;
         addUser(new User(*SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
         addUser(new User(*SecuredString::fromBufferUnsafe("cacahuete"), ExecutionLevel::Normal));
-        addUser(new User(*SecuredString::fromBufferUnsafe("sandy"), ExecutionLevel::Low));
-        addUser(new User(*SecuredString::fromBufferUnsafe("kevin"), ExecutionLevel::High));
+        addUser(new User(*SecuredString::fromBufferUnsafe("boat"), ExecutionLevel::Low));
+        addUser(new User(*SecuredString::fromBufferUnsafe("coconut"), ExecutionLevel::High));
         m_alreadyAddedDefaultUsers = true;
     }
     int m_currentUserIndex;

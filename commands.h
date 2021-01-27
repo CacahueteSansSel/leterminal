@@ -415,6 +415,8 @@ void command_users(SecuredStringList* args) {
 }
 
 void command_neofetch(SecuredStringList* args) {
+    int y = Terminal::Screen::posY;
+
     Terminal::Screen::writeBitmap(neofetch_logo, NEOFETCH_LOGO_WIDTH, NEOFETCH_LOGO_HEIGHT, FIRMWARE_MAIN_COLOR);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), FIRMWARE_MAIN_COLOR);
@@ -430,12 +432,13 @@ void command_neofetch(SecuredStringList* args) {
     Terminal::Screen::writeLn(FIRMWARE_NAME, KDColorWhite);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write("Kernel: ", FIRMWARE_MAIN_COLOR);
-    Terminal::Screen::write("Ion ", KDColorWhite);
+    Terminal::Screen::write("Hardware Lib: ", KDColorWhite);
     Terminal::Screen::writeLn(Ion::softwareVersion(), KDColorWhite);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write("Terminal: ", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn("L.E. Terminal ", KDColorWhite);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::posY = y + NEOFETCH_LOGO_HEIGHT;
 }
 
 #endif

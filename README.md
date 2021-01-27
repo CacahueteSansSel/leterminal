@@ -14,9 +14,9 @@ Each user have an username, a UID (universal id), and an execution level (*low* 
 *Let* introduces four default user accounts, each assigned to a specific execution level : 
 
 + **root** is, obviously, the **root** user : it have the highest execution level (well, named **root**)
-+ **sandy**, who takes the lowest execution level (**low**)
++ **boat**, who takes the lowest execution level (**low**)
 + **cacahuete**, who takes the normal execution level (**normal**)
-+ **kevin**, who takes the **high** (right below root) execution level.
++ **coconut**, who takes the **high** (right below root) execution level.
 
 Users can also be added dynamically using the `useradd` command.
 
@@ -50,5 +50,27 @@ Here are the implemented commands :
 + `useradd` : add an user to the user repository
 + `users` : list available users, use `-d` as argument for detailed output
 
-### Building instruction
-TODO
+## Building instructions
+
+### As a "*subfirmware*"
+If you want to use *let* as a "subfirmware" (kind of a firmware in a firmware), follow these steps : 
+
++ Clone the source of the firmware you want to use (ex: [Epsilon](https://github.com/numworks/epsilon))
++ Clone this repository in the `apps/terminal` folder of the firmware source (the `terminal` folder needs to be created, of course)
++ Add the following line to the *makefile* `apps/Makefile` at the top : 
+```
+include apps/terminal/Makefile
+```
++ Go to the `main.cpp` file and add this line to the top :
+```
+#include "terminal/startup.h"
+```
++ In the same file, call the terminal's main function right below `Poincare::Init();` : 
+```
+void ion_main(int argc, const char * const argv[]) {
+  // Initialize Poincare::TreePool::sharedPool
+  Poincare::Init();
+
+  terminal_startup_check(argc, argv);
+```
+And done ! You will be able to launch the terminal at startup when pressing the *HOME* key !
