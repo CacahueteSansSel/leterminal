@@ -4,6 +4,8 @@
 
 L.E. Terminal (*let* for short) is a little UNIX-inspired terminal for the Numworks Calculator. 
 
+![Screenshot](res/screenshot)
+
 *It does not use escher (Numworks' GUI Library)*.
 
 ## Features
