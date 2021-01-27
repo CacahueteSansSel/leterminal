@@ -1,5 +1,5 @@
-#ifndef NUMBOOT_LIST
-#define NUMBOOT_LIST
+#ifndef TERMINAL_LIST
+#define TERMINAL_LIST
 
 #define LIST_MAX_COUNT 64
 #include <stdlib.h>
