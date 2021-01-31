@@ -7,6 +7,7 @@
 #include "stringx.h"
 #include "font.h"
 #include "system/power.h"
+#include "events.h"
 
 namespace Terminal {
 
@@ -76,11 +77,27 @@ static int posY = 0;
 static StringPositionalList* history = 0;
 static ReadLineSettings* readLnSettings;
 
-static uint8_t lastKey = 0;
+static VolatileUInt8List* lastKeys;
+static Ion::Keyboard::State keyScan;
+static bool curPeriod = false; //Cursor's period : false=increasing, true=decreasing
+
+enum class TerminalCellBackground : uint8_t {
+    Fill,
+    Stroke,
+    StrokeUp,
+    StrokeDown,
+    StrokeLeft,
+    StrokeRight,
+    StrokeCornerUL,
+    StrokeCornerUR,
+    StrokeCornerDL,
+    StrokeCornerDR
+};
 
 struct terminal_cell_t {
     uint16_t back;
     uint16_t fore;
+    TerminalCellBackground backStyle;
     char character[1];
 };
 
@@ -91,24 +108,44 @@ static bool operator==(terminal_cell_t left, terminal_cell_t right) {
 static terminal_cell_t Screen[CharWidth * CharHeight];
 static terminal_cell_t screenInternal[CharWidth * CharHeight];
 
-#define LMAP(key, nonshift, shift, alpha, alphacaps) if (scan.keyDown(key) && lastKey != (uint8_t)key) { \
+#define LMAP(key, nonshift, shift, alpha, alphacaps) if (keyPressed(key)) { \
 if (Terminal::Keyboard::isShift()) { buffer[ptr] = shift; writeChar(settings->doHideText() ? '*' : shift); ptr++; redraw(); } \
 else if (Terminal::Keyboard::isAlphaCaps()) { buffer[ptr] = alphacaps; writeChar(settings->doHideText() ? '*' : alphacaps); ptr++; redraw(); } \
 else if (Terminal::Keyboard::isAlpha()) { buffer[ptr] = alpha; writeChar(settings->doHideText() ? '*' : alpha); ptr++; redraw(); } \
 else { buffer[ptr] = nonshift; writeChar(settings->doHideText() ? '*' : nonshift); ptr++; redraw(); } \
-lastKey = (uint8_t)key; \
-} else if (!scan.keyDown(key) && lastKey == (uint8_t)key) { lastKey = 0; } \
+}
 
-#define LMAPSTR(key, nonshift, shift, alpha, alphacaps) if (scan.keyDown(key) && lastKey != (uint8_t)key) { \
+#define LMAPSTR(key, nonshift, shift, alpha, alphacaps) if (keyPressed(key)) { \
 if (Terminal::Keyboard::isShift()) { memcpy(buffer + ptr, shift, strlen(shift)); write(settings->doHideText() ? "*" : shift); ptr += strlen(shift); redraw(); } \
 else if (Terminal::Keyboard::isAlphaCaps()) { memcpy(buffer + ptr, alphacaps, strlen(alphacaps)); write(settings->doHideText() ? "*" : alphacaps); ptr += strlen(alphacaps); redraw(); } \
 else if (Terminal::Keyboard::isAlpha()) { memcpy(buffer + ptr, alpha, strlen(alpha)); write(settings->doHideText() ? "*" : alpha); ptr += strlen(alpha); redraw(); } \
 else { memcpy(buffer + ptr, nonshift, strlen(nonshift)); write(settings->doHideText() ? "*" : nonshift); ptr += strlen(nonshift); redraw(); } \
-lastKey = (uint8_t)key; \
-} else if (!scan.keyDown(key) && lastKey == (uint8_t)key) { lastKey = 0; } \
+}
 
 static KDPoint screenCursorPosition() {
     return KDPoint(posX * 8, posY * 12);
+}
+
+static void init() {
+    lastKeys = new VolatileUInt8List();
+}
+
+static bool keyPressed(Ion::Keyboard::Key key) {
+    bool state = keyScan.keyDown(key) && !lastKeys->any((uint8_t)key);
+    if (state) lastKeys->append((uint8_t)key);
+
+    return state;
+}
+
+static void keyRead() {
+    keyScan = Ion::Keyboard::scan();
+}
+
+static void keyEnd() {
+    keyRead();
+    for (int i = 0; i < lastKeys->count(); i++) {
+        if (!keyScan.keyDown((Ion::Keyboard::Key)lastKeys->at(i))) lastKeys->clear(lastKeys->at(i));
+    }
 }
 
 static void drawChar(KDContext* ctx, char c, KDColor back, KDColor color, KDPoint pos) {
@@ -136,15 +173,113 @@ static void redraw(bool complete = false) {
             if (cell == screenInternal[y * CharWidth + x] && !complete) continue;
             screenInternal[y * CharWidth + x] = cell;
             KDRect screenRect = KDRect(x * 8, y * 12, 8, 12);
-            ctx->fillRect(screenRect, KDColor::RGB16(cell.back));
+            switch (cell.backStyle) {
+                case TerminalCellBackground::Fill:
+                    ctx->fillRect(screenRect, KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::Stroke:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x() + screenRect.width()-1, screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y() + screenRect.height()-1, screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeUp:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeDown:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y() + screenRect.height()-1, screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeLeft:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeRight:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x() + screenRect.width()-1, screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeCornerUL:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeCornerUR:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x() + screenRect.width()-1, screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeCornerDL:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y() + screenRect.height()-1, screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+                case TerminalCellBackground::StrokeCornerDR:
+                    ctx->fillRect(screenRect, KDColorBlack);
+                    ctx->fillRect(KDRect(screenRect.x(), screenRect.y() + screenRect.height()-1, screenRect.width(), 1), KDColor::RGB16(cell.back));
+                    ctx->fillRect(KDRect(screenRect.x() + screenRect.width()-1, screenRect.y(), 1, screenRect.height()), KDColor::RGB16(cell.back));
+                    break;
+            }
             drawChar(ctx, cell.character[0], KDColor::RGB16(cell.back), KDColor::RGB16(cell.fore), screenRect.topLeft());
         }
     }
+
+    ctx->fillRect(KDRect(screenCursorPosition(), KDSize(8, 12)), curPeriod ? KDColorBlack : KDColorWhite);
 }
 
 static void setColorsAt(int x, int y, KDColor back, KDColor fore) {
+    if (x < 0 || y < 0 || x >= CharWidth || y >= CharHeight) return;
+
     Screen[y * CharWidth + x].back = back;
     Screen[y * CharWidth + x].fore = fore;
+}
+
+static void setBackColorAt(int x, int y, KDColor back) {
+    if (x < 0 || y < 0 || x >= CharWidth || y >= CharHeight) return;
+
+    Screen[y * CharWidth + x].back = back;
+}
+
+static void setForeColorAt(int x, int y, KDColor fore) {
+    if (x < 0 || y < 0 || x >= CharWidth || y >= CharHeight) return;
+
+    Screen[y * CharWidth + x].fore = fore;
+}
+
+static void setCellStyle(int x, int y, TerminalCellBackground style) {
+    if (x < 0 || y < 0 || x >= CharWidth || y >= CharHeight) return;
+
+    Screen[y * CharWidth + x].backStyle = style;
+}
+
+static void setCellStyle(KDPoint pos, TerminalCellBackground style) {
+    if (pos.x() < 0 || pos.y() < 0 || pos.x() >= CharWidth || pos.y() >= CharHeight) return;
+
+    Screen[pos.y() * CharWidth + pos.x()].backStyle = style;
+}
+
+static void drawRect(KDRect rect, KDColor color) {
+    for (int x = rect.x(); x < rect.right(); x++) {
+        setCellStyle(x, rect.y(), TerminalCellBackground::StrokeUp);
+        setCellStyle(x, rect.bottom(), TerminalCellBackground::StrokeDown);
+        setBackColorAt(x, rect.y(), color);
+        setBackColorAt(x, rect.bottom(), color);
+    }
+    for (int y = rect.y(); y < rect.bottom(); y++) {
+        setCellStyle(rect.x(), y, TerminalCellBackground::StrokeLeft);
+        setCellStyle(rect.right(), y, TerminalCellBackground::StrokeRight);
+        setBackColorAt(rect.x(), y, color);
+        setBackColorAt(rect.right(), y, color);
+    }
+    setCellStyle(rect.topLeft(), TerminalCellBackground::StrokeCornerUL);
+    setBackColorAt(rect.x(), rect.y(), color);
+    setCellStyle(rect.topRight(), TerminalCellBackground::StrokeCornerUR);
+    setBackColorAt(rect.topRight().x(), rect.topRight().y(), color);
+    setCellStyle(rect.bottomLeft(), TerminalCellBackground::StrokeCornerDL);
+    setBackColorAt(rect.bottomLeft().x(), rect.bottomLeft().y(), color);
+    setCellStyle(rect.bottomRight(), TerminalCellBackground::StrokeCornerDR);
+    setBackColorAt(rect.bottomRight().x(), rect.bottomRight().y(), color);
 }
 
 static void copy(KDRect from, KDPoint to) {
@@ -187,9 +322,6 @@ static void scrollDown() {
 }
 
 static void newLine() {
-    // Ensure that the last position is cleared out to avoid cursor ghosting
-    // A bit hacky fix here
-    if (getBackColorAt(posX, posY) == KDColorWhite) setColorsAt(posX, posY, KDColorBlack, KDColorWhite);
     posX--;
     posY++;
     posX = 0;
@@ -204,17 +336,11 @@ static void newLine() {
 }
 
 static void incrementPos() {
-    // Ensure that the last position is cleared out to avoid cursor ghosting
-    // A bit hacky fix here
-    if (getBackColorAt(posX, posY) == KDColorWhite) setColorsAt(posX, posY, KDColorBlack, KDColorWhite);
     posX++;
     if (posX >= CharWidth) newLine();
 }
 
 static void decrementPos() {
-    // Ensure that the last position is cleared out to avoid cursor ghosting
-    // A bit hacky fix here
-    if (getBackColorAt(posX, posY) == KDColorWhite) setColorsAt(posX, posY, KDColorBlack, KDColorWhite);
     posX--;
     if (posX < 0) {
         posY--;
@@ -359,6 +485,7 @@ static void clear() {
             Screen[y * CharWidth + x].character[0] = ' ';
             Screen[y * CharWidth + x].back = KDColorBlack;
             Screen[y * CharWidth + x].fore = KDColorWhite;
+            Screen[y * CharWidth + x].backStyle = TerminalCellBackground::Fill;
         }
     }
     posY = 0;
@@ -370,11 +497,19 @@ static void writeBitmap(bool* bitmap, int width, int height, KDColor color) {
     for (int y = 0; y < height; y++)
     {
         for (int x = 0; x < width; x++) {
+            if (Terminal::Screen::posY + y >= CharHeight) {
+                scrollDown();
+            }
             if (bitmap[y * width + x]) setColorsAt(x, Terminal::Screen::posY + y, color, color);
             else setColorsAt(x, Terminal::Screen::posY + y, KDColorBlack, KDColorBlack);
         }
     }
     posX += width;
+}
+
+static bool safeLoop() {
+    keyRead(); // Just to be sure ;)
+    return !keyPressed(Ion::Keyboard::Key::Back);
 }
 
 static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings = nullptr) {
@@ -385,38 +520,31 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
     int cursor = 0; //0-50 : invisible - 50-100 : visible
     int originX = posX;
     int originY = posY;
-    bool curPeriod = false; //Cursor's period : false=increasing, true=decreasing
     while (true) {
-        auto scan = Ion::Keyboard::scan();
-        if ((scan.keyDown(Ion::Keyboard::Key::OK) || scan.keyDown(Ion::Keyboard::Key::EXE))
-        && (lastKey != (uint8_t)Ion::Keyboard::Key::OK)) {
+        keyEnd();
+        keyRead();
+        if (!safeLoop()) {
+            newLine();
+            return EBREAK;
+        }
+
+        if (keyPressed(Ion::Keyboard::Key::OK) || keyPressed(Ion::Keyboard::Key::EXE)) {
             buffer[ptr] = '\0';
-            lastKey = (uint8_t)Ion::Keyboard::Key::OK;
             if (settings->isHistoryEnabled()) history->copy(buffer, ptr);
             break;
-        } else if (!scan.keyDown(Ion::Keyboard::Key::OK) && !scan.keyDown(Ion::Keyboard::Key::EXE) && (lastKey == (uint8_t)Ion::Keyboard::Key::OK)) {
-            lastKey = 0;
         }
 
-        if (scan.keyDown(Ion::Keyboard::Key::Alpha) && lastKey != (uint8_t)Ion::Keyboard::Key::Alpha) {
+        if (keyPressed(Ion::Keyboard::Key::Alpha)) {
             Terminal::Keyboard::toggleAlpha();
             updateTextStatus();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Alpha;
-        }
-        else if (!scan.keyDown(Ion::Keyboard::Key::Alpha) && lastKey == (uint8_t)Ion::Keyboard::Key::Alpha) { 
-            lastKey = 0;
         }
         
-        if (scan.keyDown(Ion::Keyboard::Key::Shift) && lastKey != (uint8_t)Ion::Keyboard::Key::Shift) {
+        if (keyPressed(Ion::Keyboard::Key::Shift)) {
             Terminal::Keyboard::toggleShift();
             updateTextStatus();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Shift;
-        } 
-        else if (!scan.keyDown(Ion::Keyboard::Key::Shift) && lastKey == (uint8_t)Ion::Keyboard::Key::Shift) { 
-            lastKey = 0;
         }
 
-        if (scan.keyDown(Ion::Keyboard::Key::Down) && lastKey != (uint8_t)Ion::Keyboard::Key::Down) {
+        if (keyPressed(Ion::Keyboard::Key::Down)) {
             if (!history->canDecrement() || !settings->isHistoryEnabled()) continue;
             memset(buffer, '\0', 256);
             memcpy(buffer, history->selected().c_str(), history->selected().size());
@@ -425,16 +553,12 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             write(buffer);
             ptr = history->selected().size();
             history->decPointer();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Down;
             updateTextStatus();
 
             redraw();
         }
-        else if (!scan.keyDown(Ion::Keyboard::Key::Down) && lastKey == (uint8_t)Ion::Keyboard::Key::Down) { 
-            lastKey = 0;
-        }
 
-        if (scan.keyDown(Ion::Keyboard::Key::Up) && lastKey != (uint8_t)Ion::Keyboard::Key::Up) {
+        if (keyPressed(Ion::Keyboard::Key::Up)) {
             if (!history->canIncrement() || !settings->isHistoryEnabled()) continue;
             memset(buffer, '\0', 256);
             memcpy(buffer, history->selected().c_str(), history->selected().size());
@@ -443,33 +567,21 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             write(buffer);
             ptr = history->selected().size();
             history->incPointer();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Up;
             updateTextStatus();
 
             redraw();
         }
-        else if (!scan.keyDown(Ion::Keyboard::Key::Up) && lastKey == (uint8_t)Ion::Keyboard::Key::Up) { 
-            lastKey = 0;
-        }
 
-        if (scan.keyDown(Ion::Keyboard::Key::Left) && lastKey != (uint8_t)Ion::Keyboard::Key::Left) {
+        if (keyPressed(Ion::Keyboard::Key::Left)) {
             if (ptr <= 0) continue;
             ptr--;
             decrementPos();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Left;
-        }
-        else if (!scan.keyDown(Ion::Keyboard::Key::Left) && lastKey == (uint8_t)Ion::Keyboard::Key::Left) { 
-            lastKey = 0;
         }
 
-        if (scan.keyDown(Ion::Keyboard::Key::Right) && lastKey != (uint8_t)Ion::Keyboard::Key::Right) {
+        if (keyPressed(Ion::Keyboard::Key::Right)) {
             if (ptr >= strlen(buffer)-1) continue;
             ptr++;
             incrementPos();
-            lastKey = (uint8_t)Ion::Keyboard::Key::Right;
-        }
-        else if (!scan.keyDown(Ion::Keyboard::Key::Right) && lastKey == (uint8_t)Ion::Keyboard::Key::Right) { 
-            lastKey = 0;
         }
 
         //Letters
@@ -484,7 +596,6 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         LMAP(Ion::Keyboard::Key::Nine, '9', '9', 'o', 'O');
         LMAP(Ion::Keyboard::Key::Zero, '0', '0', '?', '?');
         LMAP(Ion::Keyboard::Key::Dot, '.', '.', '!', '!');
-        LMAP(Ion::Keyboard::Key::EE, 'e', 'e', 'e', 'e');
         LMAP(Ion::Keyboard::Key::Plus, '+', '+', 'z', 'Z');
         LMAP(Ion::Keyboard::Key::Minus, '-', '-', ' ', ' ');
         LMAP(Ion::Keyboard::Key::Multiplication, '*', '*', 'u', 'U');
@@ -509,13 +620,12 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
         LMAPSTR(Ion::Keyboard::Key::EE, "*10^", "*10^", "*10^", "*10^");
         LMAPSTR(Ion::Keyboard::Key::Ans, "ans", "ans", "ans", "ans");
 
-        if (scan.keyDown(Ion::Keyboard::Key::Backspace) && lastKey != (uint8_t)Ion::Keyboard::Key::Backspace) {
+        if (keyPressed(Ion::Keyboard::Key::Backspace)) {
             if (Terminal::Keyboard::isAlpha()) {
                 buffer[ptr] = '%'; 
                 writeChar(settings->doHideText() ? ':' : '%'); 
                 ptr++;
                 redraw();
-                lastKey = (uint8_t)Ion::Keyboard::Key::Backspace;
                 continue;
             } else if (Terminal::Keyboard::isShift()) {
                 // Backspace + Shift = Clear key
@@ -529,24 +639,15 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             decrementPos();
             writeAt(posX, posY, ' ');
 
-            lastKey = (uint8_t)Ion::Keyboard::Key::Backspace;
             redraw();
-        } else if (!scan.keyDown(Ion::Keyboard::Key::Backspace) && lastKey == (uint8_t)Ion::Keyboard::Key::Backspace) {
-            lastKey = 0;
         }
         
-        if (scan.keyDown(Ion::Keyboard::Key::OnOff) && lastKey != (uint8_t)Ion::Keyboard::Key::OnOff) {
+        if (keyPressed(Ion::Keyboard::Key::OnOff)) {
+            if (keyPressed(Ion::Keyboard::Key::Backspace)) {
+                return ESOFTRESET;
+            }
             terminalSleep();
             Terminal::Screen::redraw();
-            lastKey = (uint8_t)Ion::Keyboard::Key::OnOff;
-        } else if (!scan.keyDown(Ion::Keyboard::Key::OnOff) && lastKey == (uint8_t)Ion::Keyboard::Key::OnOff) {
-            lastKey = 0;
-        }
-
-        if (Terminal::isLaunchedFromFirmware) {
-            if (scan.keyDown(Ion::Keyboard::Key::Home) || scan.keyDown(Ion::Keyboard::Key::Back)) { // Break if HOME or back is hit
-                return -1;
-            }
         }
 
         // Update the cursor
@@ -557,7 +658,6 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             if (cursor < 0) {
                 // Switching to increase
                 curPeriod = false;
-                setColorsAt(posX, posY, curPeriod ? KDColorWhite : KDColorBlack, curPeriod ? KDColorBlack : KDColorWhite);
                 redraw();
             }
         } else {
@@ -566,12 +666,13 @@ static int readLn(char* buffer, int maxLength = 256, ReadLineSettings* settings 
             if (cursor > 100) {
                 // Switching to decrease
                 curPeriod = true;
-                setColorsAt(posX, posY, curPeriod ? KDColorWhite : KDColorBlack, curPeriod ? KDColorBlack : KDColorWhite);
                 redraw();
             }
         }
-
+        
+        keyEnd();
     }
+    keyEnd();
 
     newLine();
     return ptr;

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 class SecuredString {
     public:
@@ -104,6 +105,26 @@ class StringPositionalList {
 
         return false;
     }
+    void clear() {
+        m_pointer = 0;
+    }
+};
+
+class VolatileUInt8List {
+    private:
+    uint8_t list[LIST_MAX_COUNT];
+    int m_counter = 0;
+
+    public:
+    VolatileUInt8List() {}
+
+    int count() {return m_counter;}
+    int nextEmptySpaceIndex();
+    uint8_t at(int index) {return list[index];}
+    bool any(uint8_t item);
+    void append(uint8_t item);
+    void clear();
+    void clear(uint8_t item);
 };
 
 #endif
