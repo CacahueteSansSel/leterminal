@@ -9,6 +9,8 @@
 #include "system/users.h"
 #include "system/power.h"
 #include "firmware.h"
+#include "vfs/vfs.h"
+#include "events.h"
 
 #include "local_commands.h"
 #ifndef LOCAL_COMMANDS
@@ -23,7 +25,9 @@ void terminal_main(int argc, const char * const argv[]) {
 
     Ion::Display::pushRectUniform(KDRect(0, 0, 320, 240), KDColorBlack);
 
-    Terminal::Screen::write("L.E. Terminal ", KDColorGreen);
+    Terminal::VFS::VirtualFS::sharedVFS()->init();
+    Terminal::Screen::init();
+    Terminal::Screen::write("L.E. Terminal v", KDColorGreen);
     Terminal::Screen::writeLn(TERMINAL_VERSION, KDColorGreen);
     Terminal::Screen::writeLn("(Lightweight Emulated)", KDColorGreen);
     Terminal::Screen::write(FIRMWARE_NAME, KDColorWhite);
@@ -35,12 +39,19 @@ void terminal_main(int argc, const char * const argv[]) {
 
     char buffer[256];
     while (true) {
+        keyRead();
+
         Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), KDColorGreen);
-        Terminal::Screen::write("@numworks:/ ", KDColorGreen);
-        Terminal::Screen::write("$ ", KDColorBlue);
+        Terminal::Screen::write("@numworks:", KDColorGreen);
+        Terminal::Screen::write(Terminal::VFS::VirtualFS::sharedVFS()->current()->name(), KDColorGreen);
+        Terminal::Screen::write(" $ ", KDColorBlue);
         int readCount = Terminal::Screen::readLn(buffer);
 
-        if (readCount < 0) break;
+        if (readCount == ESOFTRESET) {
+            Terminal::Screen::clear();
+            Terminal::Screen::history->clear();
+        }
+        if (readCount == EBREAK) continue;
 
         SecuredStringList* argList = split(buffer, readCount, ' ');
         auto cmd = argList->at(0);
@@ -61,6 +72,9 @@ void terminal_main(int argc, const char * const argv[]) {
             DEFCMD("touch", command_touch)
             DEFCMD("rm", command_rm)
             DEFCMD("cp", command_cp)
+            DEFCMD("cd", command_cd)
+            DEFCMD("mkdir", command_mkdir)
+            DEFCMD("md", command_mkdir)
             DEFCMD("pyscr", command_pyscr)
             DEFCMD("cat", command_cat)
             DEFCMD("args", command_args)
@@ -85,13 +99,13 @@ void terminal_main(int argc, const char * const argv[]) {
         }
 
         // Check if power button is pressed
-        auto scan = Ion::Keyboard::scan();
-        if (scan.keyDown(Ion::Keyboard::Key::OnOff)) { // Its ONOFF, NOT POWER !!!!!!!
+        if (keyPressed(Ion::Keyboard::Key::OnOff)) { // Its ONOFF, NOT POWER !!!!!!!
             terminalSleep();
             Terminal::Screen::redraw(true);
         }
         
         // Update the LED
         Ion::LED::updateColorWithPlugAndCharge();
+        keyEnd();
     }
 }

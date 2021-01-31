@@ -24,7 +24,10 @@ Users can also be added dynamically using the `useradd` command.
 
 ### Filesystem
 
-The standard UNIX filesystem commands that are implemented currently interfaces with the Numworks' storage records (where are saved Python scripts for example). A text editor is actually in development, called **kilo** (inspired from **nano**)
+The standard UNIX filesystem commands that are implemented currently interfaces with a virtual file system (VFS).
+The Numworks' Ion Storage is mounted by default in `/ram/`
+
+A text editor is actually in development, called **kilo** (inspired from **nano**)
 
 ## Commands
 

@@ -12,6 +12,7 @@
 #include <poincare/exception_checkpoint.h>
 #include "system/users.h"
 #include "firmware.h"
+#include "vfs/vfs.h"
 
 void command_uname(SecuredStringList* args) {
     if (check(args->at(1), "-a")) {
@@ -152,22 +153,20 @@ void command_ion(SecuredStringList* args) {
     }
 }
 
-// The ls command don't work anymore for every file, because it was based on a modification of Ion
-// that is not present in every firmware (this terminal was firstly designed for a
-// custom firmware called Sigma that integrated this modification)
-// We will be working on a fix later, but for now a file extension must be specified
-// The default file extension is .py
 void command_ls(SecuredStringList* args) {
-    SecuredString ext = *SecuredString::fromBufferUnsafe("py");
-
-    if (args->count() > 1) {
-        ext = args->at(2);
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("ls: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("ls: current VFS node is not a container");
+        return;
     }
 
-    int fileCount = Ion::Storage::sharedStorage()->numberOfRecordsWithExtension(ext.c_str());
-    for (int i = 0; i < fileCount; i++) {
-        auto record = Ion::Storage::sharedStorage()->recordWithExtensionAtIndex(ext.c_str(), i);
-        Terminal::Screen::write(record.fullName()+2);
+    for (int i = 0; i < node->childCount(); i++) {
+        KDColor color = node->provideChild(i)->type() == Terminal::VFS::VFSNodeType::NodeContainer ? KDColorBlue : KDColorWhite;
+
+        Terminal::Screen::write(node->provideChild(i)->name(), color);
         Terminal::Screen::write(" ");
     }
     Terminal::Screen::newLine();
@@ -203,11 +202,22 @@ void command_touch(SecuredStringList* args) {
         Terminal::Screen::writeLn("touch: access denied");
         return;
     }
-    auto filename = args->at(1).c_str();
+    
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("touch: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("touch: current VFS node is not a container");
+        return;
+    }
 
     char data[1];
-    data[0] = '\0';
-    Ion::Storage::sharedStorage()->createRecordWithFullName((const char*)filename, (char*)data, 256);
+    data[0] = 0;
+    bool result = node->write(new Terminal::VFS::VFSNode(args->at(1).c_str(), (void*)data, 1));
+    if (!result) {
+        Terminal::Screen::writeLn("touch: failed to create the file");
+    }
 }
 
 void command_cp(SecuredStringList* args) {
@@ -220,24 +230,35 @@ void command_cp(SecuredStringList* args) {
         return;
     }
 
-    auto from = args->at(1).c_str();
-    auto to = args->at(2).c_str();
-
-    auto fromRec = Ion::Storage::sharedStorage()->recordNamed(from);
-    if (fromRec.isNull()) {
-        Terminal::Screen::write("cp: ");
-        Terminal::Screen::write(from);
-        Terminal::Screen::write(" : no such file or directory");
-        Terminal::Screen::newLine();
+    auto from = args->at(1);
+    auto to = args->at(2);
+    
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("cp: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("cp: current VFS node is not a container");
         return;
     }
 
-    Ion::Storage::sharedStorage()->createRecordWithFullName(to, fromRec.value().buffer, fromRec.value().size);
+    auto originNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(from);
+    if (originNode->type() != Terminal::VFS::VFSNodeType::Data) {
+        Terminal::Screen::writeLn("cp: input node is not a file");
+        return;
+    }
+    auto targetNode = new Terminal::VFS::VFSNode(to.c_str(), originNode->data(), originNode->dataLength());
+
+    bool result = node->write(targetNode);
+    if (!result) {
+        Terminal::Screen::writeLn("cp: failed to create the file");
+    }
 }
 
-void writeTemplate(const Code::ScriptTemplate* script) {
+bool writeTemplate(Terminal::VFS::VFSNode* node, const Code::ScriptTemplate* script) {
     size_t valueSize = Code::Script::StatusSize() + strlen(script->content()) + 1; // (auto importation status + content fetched status) + scriptcontent size + null-terminating char
-    Ion::Storage::sharedStorage()->createRecordWithFullName(script->name(), script->value(), valueSize);
+    bool success = node->write(new Terminal::VFS::VFSNode(script->name(), script->value(), valueSize));
+    return success;
 }
 
 // pyscr command
@@ -247,10 +268,20 @@ void command_pyscr(SecuredStringList* args) {
         Terminal::Screen::writeLn("pyscr: access denied");
         return;
     }
-    writeTemplate(Code::ScriptTemplate::Squares());
-    writeTemplate(Code::ScriptTemplate::Parabola());
-    writeTemplate(Code::ScriptTemplate::Mandelbrot());
-    writeTemplate(Code::ScriptTemplate::Polynomial());
+    
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("pyscr: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("pyscr: current VFS node is not a container");
+        return;
+    }
+
+    writeTemplate(node, Code::ScriptTemplate::Squares());
+    writeTemplate(node, Code::ScriptTemplate::Parabola());
+    writeTemplate(node, Code::ScriptTemplate::Mandelbrot());
+    writeTemplate(node, Code::ScriptTemplate::Polynomial());
 }
 
 void command_cat(SecuredStringList* args) {
@@ -262,16 +293,26 @@ void command_cat(SecuredStringList* args) {
         Terminal::Screen::writeLn("usage : cat <file>");
         return;
     }
-
-    auto fromRec = Ion::Storage::sharedStorage()->recordNamed(args->at(1).c_str());
-    if (fromRec.isNull()) {
-        Terminal::Screen::write("ls: ");
-        Terminal::Screen::write(args->at(1));
-        Terminal::Screen::write(" : no such file or directory");
-        Terminal::Screen::newLine();
+    
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("cat: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("cat: current VFS node is not a container");
         return;
     }
-    Terminal::Screen::writeLn((const char*)fromRec.value().buffer, KDColorWhite, fromRec.value().size);
+
+    auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(args->at(1));
+    if (fileNode == nullptr) {
+        Terminal::Screen::writeLn("cat: no such file or directory");
+        return;
+    } else if (fileNode->type() != Terminal::VFS::VFSNodeType::Data) {
+        Terminal::Screen::writeLn("cat: input node is not a file");
+        return;
+    }
+
+    Terminal::Screen::writeLn((char*)fileNode->data(), KDColorWhite, fileNode->dataLength());
 }
 
 void command_args(SecuredStringList* args) {
@@ -300,9 +341,10 @@ void command_poincare(SecuredStringList* args) {
     
     Terminal::Screen::writeLn("Poincare interactive shell");
     Terminal::Screen::writeLn("Type 'exit' to exit");
-    while (true) {
+    while (Terminal::Screen::safeLoop()) {
         Terminal::Screen::write(">>> ");
         int c = Terminal::Screen::readLn(buffer);
+        if (c < 0) break;
         if (check(buffer, "exit")) break;
         Poincare::ExceptionCheckpoint ecp;
         if (ExceptionRun(ecp)) {
@@ -443,14 +485,35 @@ void command_neofetch(SecuredStringList* args) {
     Terminal::Screen::write("OS: ", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn(FIRMWARE_NAME, KDColorWhite);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
-    Terminal::Screen::write("Kernel: ", FIRMWARE_MAIN_COLOR);
-    Terminal::Screen::write("Hardware Lib: ", KDColorWhite);
+    Terminal::Screen::write("HAL: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::write("Ion ", KDColorWhite);
     Terminal::Screen::writeLn(Ion::softwareVersion(), KDColorWhite);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write("Terminal: ", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn("L.E. Terminal ", KDColorWhite);
     Terminal::Screen::posX = 0;
     Terminal::Screen::posY = y + NEOFETCH_LOGO_HEIGHT;
+    Terminal::Screen::newLine();
+}
+
+void command_cd(SecuredStringList* args) {
+    if (args->count() == 1) {
+        Terminal::Screen::writeLn("usage: cd <name>");
+        return;
+    }
+    if (check(args->at(1), "..")) {
+        Terminal::VFS::VirtualFS::sharedVFS()->goBackwards();
+        return;
+    }
+    Terminal::VFS::VirtualFS::sharedVFS()->warp(args->at(1).c_str());
+}
+
+void command_mkdir(SecuredStringList* args) {
+    if (args->count() == 1) {
+        Terminal::Screen::writeLn("usage: mkdir <name>");
+        return;
+    }
+    Terminal::VFS::VirtualFS::sharedVFS()->mount(new Terminal::VFS::VFSNode(args->at(1).c_str()));
 }
 
 #endif
