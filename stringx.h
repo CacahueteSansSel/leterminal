@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include "list.h"
 
-static char currentBuffer[256];
-static char itemBuffer[256];
+static char currentBuffer[100];
+static char itemBuffer[64];
 
 static bool startsWith(const char* target, const char* text) {
     int count = strlen(text);
@@ -39,17 +39,17 @@ static bool check(SecuredString target, char* text) {
     return startsWith(target, *SecuredString::fromBufferUnsafe(text));
 }
 
-static SecuredStringList* split(char* text, int textLength, char separator) {
+static SecuredStringList* split(SecuredStringList* sourceList, char* text, int textLength, char separator) {
     int itemPtr = 0;
     int textPtr = 0;
     bool inQuotes = false;
-    SecuredStringList* list = new SecuredStringList();
+    SecuredStringList* list = sourceList == nullptr ? new SecuredStringList() : sourceList;
 
     for (int i = 0; i < textLength; i++) {
         if (text[i] == separator && !inQuotes) {
             currentBuffer[textPtr] = '\0';
             list->copy(currentBuffer, textPtr);
-            memset(currentBuffer, '\0', 256);
+            memset(currentBuffer, '\0', 100);
             textPtr = 0;
             continue;
         }
@@ -64,6 +64,7 @@ static SecuredStringList* split(char* text, int textLength, char separator) {
     }
     currentBuffer[textPtr] = '\0';
     list->copy(currentBuffer, textPtr);
+    memset(currentBuffer, '\0', 100);
 
     return list;
 }

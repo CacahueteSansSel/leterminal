@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <ion.h>
 
 class SecuredString {
     public:
@@ -19,7 +20,7 @@ class SecuredString {
     }
 
     static SecuredString* copy(int _size, char* _chars) {
-        char* newbuffer = new char[256];
+        char* newbuffer = (char*)malloc(_size+1);
 
         memcpy(newbuffer, _chars, _size);
         SecuredString* str = new SecuredString(_size, newbuffer);
@@ -27,18 +28,24 @@ class SecuredString {
         return str;
     }
 
+    bool validate() const { return Ion::crc32Byte((const uint8_t*)m_chars, m_size) == m_safetyHash; }
+
     int size() const { return m_size; }
     char* c_str() const {
+        if (!validate()) {
+            return nullptr;
+        }
         // We ensure that the string is null-terminated to avoid shit
         if (m_chars[m_size] != '\0') m_chars[m_size] = '\0';
 
         return m_chars;
     }
-    char at(int index) const { return index >= size() ? ' ' : m_chars[index]; }
+    char at(int index) const { return index >= size() ? '\0' : m_chars[index]; }
 
-    SecuredString(int _size, char* _chars) : m_size(_size), m_chars(_chars) {}
+    SecuredString(int _size, char* _chars) : m_size(_size), m_chars(_chars), m_safetyHash(Ion::crc32Byte((const uint8_t*)_chars, _size)) {}
     private:
     int m_size;
+    uint32_t m_safetyHash;
     char* m_chars;
 };
 
@@ -64,6 +71,8 @@ class SecuredStringList {
     SecuredStringList() {}
     int count() const { return counter; }
 
+    void dispose();
+    void clear();
     void add(char* element, int size);
     void copy(char* element, int size);
     SecuredString at(int index);

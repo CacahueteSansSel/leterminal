@@ -32,6 +32,17 @@ void SecuredStringList::add(char* element, int size) {
     counter++;
 }
 
+void SecuredStringList::dispose() {
+    for (int i = 0; i < counter; i++) {
+        free(list[i]);
+    }
+    counter = 0;
+}
+
+void SecuredStringList::clear() {
+    counter = 0;
+}
+
 void SecuredStringList::copy(char* element, int size) {
     if (counter >= LIST_MAX_COUNT) return;
     

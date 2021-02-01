@@ -36,6 +36,13 @@ class IonStorageNode : public VFSNode {
         auto error = Ion::Storage::sharedStorage()->createRecordWithFullName(node->name().c_str(), node->data(), node->dataLength());
         return error == Ion::Storage::Record::ErrorStatus::None;
     }
+
+    bool remove(const char* name) override {
+        auto record = Ion::Storage::sharedStorage()->recordNamed(name);
+        if (record.isNull()) return false;
+        record.destroy();
+        return true;
+    }
 };
 
 }
