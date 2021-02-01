@@ -2,6 +2,7 @@
 #define TERMINAL_VFS
 #include "vfs_node.h"
 #include "vfs_ionstorage_node.h"
+#include "vfs_externalapp_node.h"
 #include "../stringx.h"
 #include "../list.h"
 
@@ -26,6 +27,7 @@ class VirtualFS {
 
     void mountVirtual() {
         mount(new IonStorageNode());
+        mount(new ExternalAppStorageNode());
     }
 
     void init() {
@@ -37,12 +39,13 @@ class VirtualFS {
     }
 
     VFSNode* fetch(SecuredString path) {
-        SecuredStringList* list = split(path.c_str(), path.size(), '/');
+        if (pathList == nullptr) pathList = new SecuredStringList();
+        split(pathList, path.c_str(), path.size(), '/');
         
         VFSNode* node = path.at(0) == '/' ? m_root : m_current;
         int listPtr = 0;
-        while (listPtr < list->count()) {
-            SecuredString entry = list->at(listPtr);
+        while (listPtr < pathList->count()) {
+            SecuredString entry = pathList->at(listPtr);
             if (entry.size() == 0) continue;
             VFSNode* tmp = node->provideChild(entry.c_str());
             if (tmp == nullptr) {
@@ -73,6 +76,7 @@ class VirtualFS {
     }
 
     private:
+    SecuredStringList* pathList;
     VFSNode* m_root;
     VFSNode* m_current;
 };

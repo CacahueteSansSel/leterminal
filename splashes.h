@@ -1,0 +1,6 @@
+#ifndef TERMINAL_SPLASHES
+#define TERMINAL_SPLASHES
+
+
+
+#endif

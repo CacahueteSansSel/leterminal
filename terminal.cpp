@@ -11,6 +11,7 @@
 #include "firmware.h"
 #include "vfs/vfs.h"
 #include "events.h"
+#include "external/heap.h"
 
 #include "local_commands.h"
 #ifndef LOCAL_COMMANDS
@@ -37,9 +38,11 @@ void terminal_main(int argc, const char * const argv[]) {
     Terminal::Screen::write(FIRMWARE_VERSION, KDColorWhite);
     Terminal::Screen::newLine();
 
-    char buffer[256];
+    char* buffer;
+    SecuredStringList* argList = new SecuredStringList();
     while (true) {
-        keyRead();
+        buffer = (char*)malloc(256);
+        Terminal::Screen::keyRead();
 
         Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), KDColorGreen);
         Terminal::Screen::write("@numworks:", KDColorGreen);
@@ -47,55 +50,85 @@ void terminal_main(int argc, const char * const argv[]) {
         Terminal::Screen::write(" $ ", KDColorBlue);
         int readCount = Terminal::Screen::readLn(buffer);
 
+
         if (readCount == ESOFTRESET) {
             Terminal::Screen::clear();
             Terminal::Screen::history->clear();
         }
         if (readCount == EBREAK) continue;
 
-        SecuredStringList* argList = split(buffer, readCount, ' ');
-        auto cmd = argList->at(0);
+        if (readCount != 0) {
+            split(argList, buffer, readCount, ' ');
+            auto cmd = argList->at(0);
 
-        Poincare::ExceptionCheckpoint ecp;
-        if (ExceptionRun(ecp)) {
-            if (check(cmd, "exit")) {
-                return;
-            } 
-            LOCAL_COMMANDS
-            DEFCMD("uname", command_uname)
-            DEFCMD("echo", command_echo)
-            DEFCMD("clear", command_clear)
-            DEFCMD("history", command_history)
-            DEFCMD("whoami", command_whoami)
-            DEFCMD("ion", command_ion)
-            DEFCMD("ls", command_ls)
-            DEFCMD("touch", command_touch)
-            DEFCMD("rm", command_rm)
-            DEFCMD("cp", command_cp)
-            DEFCMD("cd", command_cd)
-            DEFCMD("mkdir", command_mkdir)
-            DEFCMD("md", command_mkdir)
-            DEFCMD("pyscr", command_pyscr)
-            DEFCMD("cat", command_cat)
-            DEFCMD("args", command_args)
-            DEFCMD("chars", command_chars)
-            DEFCMD("poincare", command_poincare)
-            //DEFCMD("kilo", command_kilo)
-            DEFCMD("su", command_su)
-            DEFCMD("useradd", command_useradd)
-            DEFCMD("users", command_users)
-            DEFCMD("id", command_id)
-            DEFCMD("neofetch", command_neofetch)
-            else {
-                if (argList->at(0).size() == 0) continue;
+            Poincare::ExceptionCheckpoint ecp;
+            if (ExceptionRun(ecp)) {
+                if (check(cmd, "exit")) {
+                    return;
+                } else if (startsWith(cmd.c_str(), "./")) {
+                    char* buffer = cmd.c_str() + 2;
+                    int size = cmd.size() - 2;
+
+                    auto node = Terminal::VFS::VirtualFS::sharedVFS()->fetch(*SecuredString::fromBufferUnsafe(buffer));
+                    if (node == nullptr) {
+                        Terminal::Screen::write("le: ");
+                        Terminal::Screen::write(buffer, KDColorWhite, size);
+                        Terminal::Screen::writeLn(" : no such executable file");
+                    } else if (!node->isExecutable()) {
+                        Terminal::Screen::write("le: ");
+                        Terminal::Screen::write(buffer, KDColorWhite, size);
+                        Terminal::Screen::writeLn(" : not a executable file");
+                    } else {
+                        // Allocate heap
+                        external_heap = (char*)malloc(HEAP_SIZE);
+                        int exitCode = node->execute();
+                        free(external_heap);
+
+                        Terminal::Screen::write(buffer, KDColorWhite, size);
+                        Terminal::Screen::write(": exit (");
+                        Terminal::Screen::writeChar(intToString(exitCode));
+                        Terminal::Screen::write(")");
+                        Terminal::Screen::newLine();
+                    }
+                    Terminal::Screen::keyEnd();
+                    continue;
+                }
+                LOCAL_COMMANDS
+                DEFCMD("uname", command_uname)
+                DEFCMD("echo", command_echo)
+                DEFCMD("clear", command_clear)
+                DEFCMD("history", command_history)
+                DEFCMD("whoami", command_whoami)
+                DEFCMD("ion", command_ion)
+                DEFCMD("ls", command_ls)
+                DEFCMD("touch", command_touch)
+                DEFCMD("rm", command_rm)
+                DEFCMD("cp", command_cp)
+                DEFCMD("cd", command_cd)
+                DEFCMD("mkdir", command_mkdir)
+                DEFCMD("md", command_mkdir)
+                DEFCMD("pyscr", command_pyscr)
+                DEFCMD("cat", command_cat)
+                DEFCMD("args", command_args)
+                DEFCMD("chars", command_chars)
+                DEFCMD("poincare", command_poincare)
+                //DEFCMD("kilo", command_kilo)
+                DEFCMD("su", command_su)
+                DEFCMD("useradd", command_useradd)
+                DEFCMD("users", command_users)
+                DEFCMD("id", command_id)
+                DEFCMD("neofetch", command_neofetch)
+                else {
+                    if (argList->at(0).size() == 0) continue;
+                    Terminal::Screen::write("le: ");
+                    Terminal::Screen::write(cmd);
+                    Terminal::Screen::writeLn(" : invalid command");
+                }
+            } else {
                 Terminal::Screen::write("le: ");
                 Terminal::Screen::write(cmd);
-                Terminal::Screen::writeLn(" : invalid command");
+                Terminal::Screen::writeLn(" : unknown error");
             }
-        } else {
-            Terminal::Screen::write("le: ");
-            Terminal::Screen::write(cmd);
-            Terminal::Screen::writeLn(" : unknown error");
         }
 
         // Check if power button is pressed
@@ -106,6 +139,8 @@ void terminal_main(int argc, const char * const argv[]) {
         
         // Update the LED
         Ion::LED::updateColorWithPlugAndCharge();
-        keyEnd();
+        Terminal::Screen::keyEnd();
+        argList->dispose();
+        free(buffer);
     }
 }

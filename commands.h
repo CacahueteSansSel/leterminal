@@ -181,16 +181,18 @@ void command_rm(SecuredStringList* args) {
         Terminal::Screen::writeLn("rm: access denied");
         return;
     }
-    auto record = Ion::Storage::sharedStorage()->recordNamed(args->at(1).c_str());
-
-    if (record.isNull()) {
-        Terminal::Screen::write("rm: no such file or directory: ");
-        Terminal::Screen::write(args->at(1));
-        Terminal::Screen::newLine();
+    
+    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    if (node == nullptr) {
+        Terminal::Screen::writeLn("rm: current VFS node is nullptr");
+        return;
+    } else if (node->type() != Terminal::VFS::VFSNodeType::NodeContainer) {
+        Terminal::Screen::writeLn("rm: current VFS node is not a container");
         return;
     }
 
-    record.destroy();
+    bool result = node->remove(args->at(1).c_str());
+    if (!result) Terminal::Screen::writeLn("rm: failed to delete the file");
 }
 
 void command_touch(SecuredStringList* args) {
