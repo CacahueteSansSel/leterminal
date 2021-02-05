@@ -1,18 +1,19 @@
 #ifndef TERMINAL_COMMANDS
 #define TERMINAL_COMMANDS
-#include "list.h"
-#include "termscreen.h"
-#include "stringx.h"
-#include "../code/script_template.h"
-#include "../code/script.h"
+#include "../list.h"
+#include "../termscreen.h"
+#include "../stringx.h"
+#include "../../code/script_template.h"
+#include "../../code/script.h"
 #include <poincare_layouts.h>
 #include <poincare_nodes.h>
-#include "../shared/poincare_helpers.h"
+#include "../../shared/poincare_helpers.h"
 #include <poincare/init.h>
 #include <poincare/exception_checkpoint.h>
-#include "system/users.h"
-#include "firmware.h"
-#include "vfs/vfs.h"
+#include "../system/users.h"
+#include "../firmware.h"
+#include "../vfs/vfs.h"
+#include "../palette.h"
 
 void command_uname(SecuredStringList* args) {
     if (check(args->at(1), "-a")) {
@@ -31,7 +32,7 @@ void command_uname(SecuredStringList* args) {
     } else if (check(args->at(1), "-n")) {
         Terminal::Screen::write("numworks");
     } else if (check(args->at(1), "-r")) {
-        Terminal::Screen::write("unknown");
+        Terminal::Screen::write(Ion::patchLevel());
     } else if (check(args->at(1), "-v")) {
         Terminal::Screen::write(Ion::softwareVersion());
     } else if (check(args->at(1), "-m")) {
@@ -99,7 +100,7 @@ void command_ion(SecuredStringList* args) {
         }
         Ion::USB::enable();
         Terminal::Screen::writeLn("USB enabled", KDColorWhite);
-        Terminal::Screen::writeLn("--- Entering DFU mode (calculator is now frozen) ---", KDColorYellow);
+        Terminal::Screen::writeLn("--- Entering DFU mode (calculator is now frozen) ---", TerminalYellow);
         Terminal::Screen::writeLn("Press [BACK] to cancel", KDColorWhite);
         Ion::USB::DFU();
         Ion::LED::updateColorWithPlugAndCharge();
@@ -154,6 +155,8 @@ void command_ion(SecuredStringList* args) {
 }
 
 void command_ls(SecuredStringList* args) {
+    bool longListing = args->count() > 1 && args->at(1)->matches("-l"); 
+
     auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("ls: current VFS node is nullptr");
@@ -164,10 +167,19 @@ void command_ls(SecuredStringList* args) {
     }
 
     for (int i = 0; i < node->childCount(); i++) {
-        KDColor color = node->provideChild(i)->type() == Terminal::VFS::VFSNodeType::NodeContainer ? KDColorBlue : KDColorWhite;
+        if (longListing) {
+            Terminal::Screen::write("  | ");
+            Terminal::Screen::write(node->provideChild(i)->isExecutable() ? "x " : "- ");
+            Terminal::Screen::write(node->provideChild(i)->name());
+            Terminal::Screen::newLine();
+        } else {
+            KDColor color = node->provideChild(i)->type() == Terminal::VFS::VFSNodeType::NodeContainer
+            ? TerminalBlue : 
+            (node->isExecutable() ? TerminalYellow : KDColorWhite);
 
-        Terminal::Screen::write(node->provideChild(i)->name(), color);
-        Terminal::Screen::write(" ");
+            Terminal::Screen::write(node->provideChild(i)->name(), color);
+            Terminal::Screen::write(" ");
+        }
     }
     Terminal::Screen::newLine();
 }
@@ -191,7 +203,7 @@ void command_rm(SecuredStringList* args) {
         return;
     }
 
-    bool result = node->remove(args->at(1).c_str());
+    bool result = node->remove(args->at(1)->c_str());
     if (!result) Terminal::Screen::writeLn("rm: failed to delete the file");
 }
 
@@ -216,7 +228,7 @@ void command_touch(SecuredStringList* args) {
 
     char data[1];
     data[0] = 0;
-    bool result = node->write(new Terminal::VFS::VFSNode(args->at(1).c_str(), (void*)data, 1));
+    bool result = node->write(new Terminal::VFS::VFSNode(args->at(1)->c_str(), (void*)data, 1));
     if (!result) {
         Terminal::Screen::writeLn("touch: failed to create the file");
     }
@@ -249,7 +261,7 @@ void command_cp(SecuredStringList* args) {
         Terminal::Screen::writeLn("cp: input node is not a file");
         return;
     }
-    auto targetNode = new Terminal::VFS::VFSNode(to.c_str(), originNode->data(), originNode->dataLength());
+    auto targetNode = new Terminal::VFS::VFSNode(to->c_str(), originNode->data(), originNode->dataLength());
 
     bool result = node->write(targetNode);
     if (!result) {
@@ -354,16 +366,16 @@ void command_poincare(SecuredStringList* args) {
             Poincare::Expression approximate = Poincare::Expression();
             Shared::PoincareHelpers::ParseAndSimplifyAndApproximate(buffer, &simplified, &approximate, nullptr);
             Poincare::Layout layout = approximate.createLayout(Poincare::Preferences::PrintFloatMode::Decimal, 7);
-            SecuredString approxStr = SecuredString(layout.serializeParsedExpression(calculationBuffer, 256, nullptr), calculationBuffer);
+            SecuredString* approxStr = new SecuredString(layout.serializeParsedExpression(calculationBuffer, 256, nullptr), calculationBuffer);
             Poincare::Layout simLayout = simplified.createLayout(Poincare::Preferences::PrintFloatMode::Decimal, 7);
-            SecuredString simplStr = SecuredString(simLayout.serializeParsedExpression(secCalculationBuffer, 256, nullptr), secCalculationBuffer);
+            SecuredString* simplStr = new SecuredString(simLayout.serializeParsedExpression(secCalculationBuffer, 256, nullptr), secCalculationBuffer);
             Terminal::Screen::write("  | ");
-            Terminal::Screen::write(simplStr, KDColorOrange);
+            Terminal::Screen::write(simplStr, TerminalBeige);
             Terminal::Screen::write(" ");
-            Terminal::Screen::writeLn(approxStr, KDColorYellow);
+            Terminal::Screen::writeLn(approxStr, TerminalIndigo);
         } else {
             Terminal::Screen::write("  | ");
-            Terminal::Screen::writeLn("Error", KDColorRed);
+            Terminal::Screen::writeLn("Error", TerminalRed);
         }
     }
 }
@@ -371,7 +383,7 @@ void command_poincare(SecuredStringList* args) {
 void command_su(SecuredStringList* args) {
     if (args->count() == 1) {
         // Login into root
-        bool result = UsersRepository::sharedRepository()->switchUser(*SecuredString::fromBufferUnsafe("root"));
+        bool result = UsersRepository::sharedRepository()->switchUser(SecuredString::fromBufferUnsafe("root"));
         if (!result) {
             Terminal::Screen::writeLn("su: root: unable to login");
             return;
@@ -379,7 +391,7 @@ void command_su(SecuredStringList* args) {
         return;
     }
 
-    SecuredString name = args->at(1);
+    SecuredString* name = args->at(1);
     bool result = UsersRepository::sharedRepository()->switchUser(name);
     if (!result) {
         Terminal::Screen::write("su: ");
@@ -398,17 +410,17 @@ void command_useradd(SecuredStringList* args) {
         Terminal::Screen::writeLn("usage : useradd <username> <level>");
         return;
     }
-    SecuredString username = args->at(1);
-    SecuredString levelname = args->at(2);
+    SecuredString* username = args->at(1);
+    SecuredString* levelname = args->at(2);
     ExecutionLevel level = ExecutionLevel::Normal;
 
-    if (levelname == *SecuredString::fromBufferUnsafe("low")) {
+    if (*levelname == *SecuredString::fromBufferUnsafe("low")) {
         level = ExecutionLevel::Low;
-    } else if (levelname == *SecuredString::fromBufferUnsafe("normal")) {
+    } else if (*levelname == *SecuredString::fromBufferUnsafe("normal")) {
         level = ExecutionLevel::Normal;
-    } else if (levelname == *SecuredString::fromBufferUnsafe("high")) {
+    } else if (*levelname == *SecuredString::fromBufferUnsafe("high")) {
         level = ExecutionLevel::High;
-    } else if (levelname == *SecuredString::fromBufferUnsafe("root")) {
+    } else if (*levelname == *SecuredString::fromBufferUnsafe("root")) {
         level = ExecutionLevel::Root;
     }
 
@@ -421,7 +433,7 @@ void command_useradd(SecuredStringList* args) {
 void command_id(SecuredStringList* args) {
     User* usr = UsersRepository::sharedRepository()->current();
 
-    SecuredString* levelStr;
+    static SecuredString* levelStr;
     if (usr->level() == ExecutionLevel::Low) levelStr = SecuredString::fromBufferUnsafe("low");
     else if (usr->level() == ExecutionLevel::Normal) levelStr = SecuredString::fromBufferUnsafe("normal");
     else if (usr->level() == ExecutionLevel::High) levelStr = SecuredString::fromBufferUnsafe("high");
@@ -435,13 +447,13 @@ void command_id(SecuredStringList* args) {
     Terminal::Screen::write(" level=");
     Terminal::Screen::writeChar(intToString((int)usr->level()));
     Terminal::Screen::write("(");
-    Terminal::Screen::write(*levelStr);
+    Terminal::Screen::write(levelStr);
     Terminal::Screen::write(")");
     Terminal::Screen::newLine();
 }
 
 void command_users(SecuredStringList* args) {
-    bool detailed = args->count() > 1 && args->at(1) == *SecuredString::fromBufferUnsafe("-d");
+    bool detailed = args->count() > 1 && *args->at(1) == *SecuredString::fromBufferUnsafe("-d");
     for (int i = 0; i < UsersRepository::sharedRepository()->count(); i++) {
         User* usr = UsersRepository::sharedRepository()->at(i);
         if (detailed) {
@@ -459,7 +471,7 @@ void command_users(SecuredStringList* args) {
             Terminal::Screen::write(" level=");
             Terminal::Screen::writeChar(intToString((int)usr->level()));
             Terminal::Screen::write("(");
-            Terminal::Screen::write(*levelStr);
+            Terminal::Screen::write(levelStr);
             Terminal::Screen::write(")");
             Terminal::Screen::newLine();
         } else {
@@ -471,6 +483,7 @@ void command_users(SecuredStringList* args) {
 }
 
 void command_neofetch(SecuredStringList* args) {
+    Terminal::Screen::clear();
     int y = Terminal::Screen::posY;
 
     Terminal::Screen::writeBitmap(neofetch_logo, NEOFETCH_LOGO_WIDTH, NEOFETCH_LOGO_HEIGHT, FIRMWARE_MAIN_COLOR);
@@ -493,6 +506,12 @@ void command_neofetch(SecuredStringList* args) {
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::write("Terminal: ", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn("L.E. Terminal ", KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("Serial N.: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::writeLn(Ion::serialNumber(), KDColorWhite);
+    Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
+    Terminal::Screen::write("Patch Level: ", FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::writeLn(Ion::patchLevel(), KDColorWhite);
     Terminal::Screen::posX = 0;
     Terminal::Screen::posY = y + NEOFETCH_LOGO_HEIGHT;
     Terminal::Screen::newLine();
@@ -507,7 +526,7 @@ void command_cd(SecuredStringList* args) {
         Terminal::VFS::VirtualFS::sharedVFS()->goBackwards();
         return;
     }
-    Terminal::VFS::VirtualFS::sharedVFS()->warp(args->at(1).c_str());
+    Terminal::VFS::VirtualFS::sharedVFS()->warp(args->at(1)->c_str());
 }
 
 void command_mkdir(SecuredStringList* args) {
@@ -515,7 +534,7 @@ void command_mkdir(SecuredStringList* args) {
         Terminal::Screen::writeLn("usage: mkdir <name>");
         return;
     }
-    Terminal::VFS::VirtualFS::sharedVFS()->mount(new Terminal::VFS::VFSNode(args->at(1).c_str()));
+    Terminal::VFS::VirtualFS::sharedVFS()->mount(new Terminal::VFS::VFSNode(args->at(1)->c_str()));
 }
 
 #endif

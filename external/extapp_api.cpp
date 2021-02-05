@@ -111,7 +111,7 @@ int extapp_fileListWithExtension(const char ** filenames, int maxrecords, const 
     }
     for (int i = 0; i < n; i++) {
       Terminal::VFS::VFSNode* node = Terminal::VFS::VirtualFS::sharedVFS()->current()->provideChild(i);
-      filenames[i] = node->name().c_str();
+      filenames[i] = node->name()->c_str();
     }
     return n;
   }

@@ -33,7 +33,7 @@ class IonStorageNode : public VFSNode {
     }
 
     bool write(VFSNode* node) override {
-        auto error = Ion::Storage::sharedStorage()->createRecordWithFullName(node->name().c_str(), node->data(), node->dataLength());
+        auto error = Ion::Storage::sharedStorage()->createRecordWithFullName(node->name()->c_str(), node->data(), node->dataLength());
         return error == Ion::Storage::Record::ErrorStatus::None;
     }
 

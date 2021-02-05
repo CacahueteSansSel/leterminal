@@ -41,6 +41,15 @@ class SecuredString {
         return m_chars;
     }
     char at(int index) const { return index >= size() ? '\0' : m_chars[index]; }
+    bool matches(const char* text) {
+        if (strlen(text) != size()) return false;
+
+        for (int i = 0; i < size(); i++) {
+            if (text[i] != at(i)) return false;
+        }
+
+        return true;
+    }
 
     SecuredString(int _size, char* _chars) : m_size(_size), m_chars(_chars), m_safetyHash(Ion::crc32Byte((const uint8_t*)_chars, _size)) {}
     private:
@@ -75,7 +84,7 @@ class SecuredStringList {
     void clear();
     void add(char* element, int size);
     void copy(char* element, int size);
-    SecuredString at(int index);
+    SecuredString* at(int index);
 };
 
 class StringPositionalList {
@@ -88,13 +97,13 @@ class StringPositionalList {
 
     StringPositionalList() {}
     int count() const { return counter; }
-    SecuredString selected() const { return m_pointer >= count() ? *SecuredString::empty() : *list[m_pointer]; }
+    SecuredString* selected() const { return m_pointer >= count() ? SecuredString::empty() : list[m_pointer]; }
     int pointer() const { return m_pointer; }
 
     void shift();
     void add(char* element, int size);
     void copy(char* element, int size);
-    SecuredString at(int index);
+    SecuredString* at(int index);
     int setPointer(int ptr) { m_pointer = ptr; }
     bool canIncrement() { return m_pointer < count()+1 && count() > 0; }
     bool canDecrement() { return m_pointer > 0; }

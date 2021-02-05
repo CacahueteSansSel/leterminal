@@ -50,10 +50,10 @@ void SecuredStringList::copy(char* element, int size) {
     counter++;
 }
 
-SecuredString SecuredStringList::at(int index) {
-    if (index >= count()) return *SecuredString::empty();
+SecuredString* SecuredStringList::at(int index) {
+    if (index >= count()) return SecuredString::empty();
 
-    return *list[index];
+    return list[index];
 }
 
 void StringPositionalList::shift() {
@@ -90,10 +90,10 @@ void StringPositionalList::copy(char* element, int size) {
     if (counter < LIST_MAX_COUNT) counter++;
 }
 
-SecuredString StringPositionalList::at(int index) {
-    if (index >= count()) return *SecuredString::empty();
+SecuredString* StringPositionalList::at(int index) {
+    if (index >= count()) return SecuredString::empty();
 
-    return *list[index];
+    return list[index];
 }
 
 bool VolatileUInt8List::any(uint8_t item) {
