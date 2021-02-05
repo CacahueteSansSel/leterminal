@@ -13,12 +13,12 @@ enum class ExecutionLevel {
 
 class User {
     private:
-    SecuredString m_name;
+    SecuredString* m_name;
     ExecutionLevel m_level;
     int m_uid;
 
     public:
-    User(SecuredString name, ExecutionLevel level) : m_name(name), m_level(level), m_uid(-1)
+    User(SecuredString* name, ExecutionLevel level) : m_name(name), m_level(level), m_uid(-1)
     {}
 
     void setUid(int uid) {
@@ -26,7 +26,7 @@ class User {
 
         m_uid = uid;
     }
-    SecuredString name() {return m_name;}
+    SecuredString* name() {return m_name;}
     ExecutionLevel level() {return m_level;}
     int uid() {return m_uid;}
 };
@@ -48,15 +48,15 @@ class UsersRepository {
     }
     int count() {return m_userPointer;}
 
-    int indexOfUsername(SecuredString name) {
+    int indexOfUsername(SecuredString* name) {
         for (int i = 0; i < m_userPointer; i++) {
-            if (name == m_users[i]->name()) return i;
+            if (*name == *m_users[i]->name()) return i;
         }
 
         return -1;
     }
 
-    bool switchUser(SecuredString name) {
+    bool switchUser(SecuredString* name) {
         int index = indexOfUsername(name);
         if (index < 0) return false;
 
@@ -81,10 +81,10 @@ class UsersRepository {
     bool m_alreadyAddedDefaultUsers;
     void setupDefaultUsers() {
         if (m_alreadyAddedDefaultUsers) return;
-        addUser(new User(*SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
-        addUser(new User(*SecuredString::fromBufferUnsafe("cacahuete"), ExecutionLevel::Normal));
-        addUser(new User(*SecuredString::fromBufferUnsafe("boat"), ExecutionLevel::Low));
-        addUser(new User(*SecuredString::fromBufferUnsafe("coconut"), ExecutionLevel::High));
+        addUser(new User(SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
+        addUser(new User(SecuredString::fromBufferUnsafe("cacahuete"), ExecutionLevel::Normal));
+        addUser(new User(SecuredString::fromBufferUnsafe("boat"), ExecutionLevel::Low));
+        addUser(new User(SecuredString::fromBufferUnsafe("coconut"), ExecutionLevel::High));
         m_alreadyAddedDefaultUsers = true;
     }
     int m_currentUserIndex;

@@ -4,6 +4,11 @@
 #include <escher.h>
 #include <kandinsky.h>
 
+// TODO: Omega
+#ifdef SIGMA
+#include "firmware_s.h"
+#else
+#ifdef EPSILON
 #define FIRMWARE_NAME "Epsilon"
 #define FIRMWARE_VERSION Ion::softwareVersion()
 #define FIRMWARE_BRANCH "-"
@@ -27,5 +32,7 @@ static bool neofetch_logo[] = {
     false, false, true, true , true , true , true , true , true, false, false,
     false, false, false, true , true , true , true , true , false, false, false,
 };
+#endif
+#endif
 
 #endif

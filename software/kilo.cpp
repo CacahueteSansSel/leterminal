@@ -17,10 +17,10 @@ void run(SecuredString filename) {
 }
 
 void command_kilo(SecuredStringList* args) {
-    auto record = Ion::Storage::sharedStorage()->recordNamed(args->at(1).c_str());
+    auto record = Ion::Storage::sharedStorage()->recordNamed(args->at(1)->c_str());
     if (record.isNull()) {
-        Ion::Storage::sharedStorage()->createRecordWithFullName(args->at(1).c_str(), "", 0);
+        Ion::Storage::sharedStorage()->createRecordWithFullName(args->at(1)->c_str(), "", 0);
     }
 
-    Kilo::run(args->at(1));
+    Kilo::run(*args->at(1));
 }

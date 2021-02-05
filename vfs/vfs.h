@@ -38,16 +38,16 @@ class VirtualFS {
         mountVirtual();
     }
 
-    VFSNode* fetch(SecuredString path) {
+    VFSNode* fetch(SecuredString* path) {
         if (pathList == nullptr) pathList = new SecuredStringList();
-        split(pathList, path.c_str(), path.size(), '/');
+        split(pathList, path->c_str(), path->size(), '/');
         
-        VFSNode* node = path.at(0) == '/' ? m_root : m_current;
+        VFSNode* node = path->at(0) == '/' ? m_root : m_current;
         int listPtr = 0;
         while (listPtr < pathList->count()) {
-            SecuredString entry = pathList->at(listPtr);
-            if (entry.size() == 0) continue;
-            VFSNode* tmp = node->provideChild(entry.c_str());
+            SecuredString* entry = pathList->at(listPtr);
+            if (entry->size() == 0) continue;
+            VFSNode* tmp = node->provideChild(entry->c_str());
             if (tmp == nullptr) {
                 // Error
                 return nullptr;
