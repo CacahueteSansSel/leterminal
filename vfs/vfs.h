@@ -2,7 +2,6 @@
 #define TERMINAL_VFS
 #include "vfs_node.h"
 #include "vfs_ionstorage_node.h"
-#include "vfs_externalapp_node.h"
 #include "../stringx.h"
 #include "../list.h"
 
@@ -27,7 +26,6 @@ class VirtualFS {
 
     void mountVirtual() {
         mount(new IonStorageNode());
-        mount(new ExternalAppStorageNode());
     }
 
     void init() {

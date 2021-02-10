@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include "list.h"
 
-static char currentBuffer[100];
+static char currentBuffer[16];
 
 static bool startsWith(const char* target, const char* text) {
     int count = strlen(text);

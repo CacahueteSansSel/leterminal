@@ -1,7 +1,7 @@
 #ifndef TERMINAL_LIST
 #define TERMINAL_LIST
 
-#define LIST_MAX_COUNT 64
+#define LIST_MAX_COUNT 24
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
