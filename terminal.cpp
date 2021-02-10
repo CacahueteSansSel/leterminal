@@ -14,6 +14,11 @@
 #include "events.h"
 #include "external/heap.h"
 #include "palette.h"
+#include "daemons/daemon.h"
+#include "daemons/powercheck_daemon.h"
+#include "daemons/sleep_daemon.h"
+#include "daemons/led_update_daemon.h"
+#include "splashes.h"
 
 #include "commands/local_commands.h"
 #ifndef LOCAL_COMMANDS
@@ -28,6 +33,12 @@ void terminal_main(int argc, const char * const argv[]) {
 
     Ion::Display::pushRectUniform(KDRect(0, 0, 320, 240), KDColorBlack);
 
+    // Registering daemons
+    Terminal::Background::Hell::shared()->summon(new Terminal::Background::PowerCheckDaemon());
+    Terminal::Background::Hell::shared()->summon(new Terminal::Background::SleepDaemon());
+    Terminal::Background::Hell::shared()->summon(new Terminal::Background::LEDUpdateDaemon());
+
+    Terminal::Background::Hell::shared()->dispatchInit();
     Terminal::VFS::VirtualFS::sharedVFS()->init();
     Terminal::Screen::init();
     Terminal::Screen::clear();
@@ -63,16 +74,17 @@ void terminal_main(int argc, const char * const argv[]) {
             if (ExceptionRun(ecp)) {
                 if (check(cmd, "exit")) {
                     return;
-                } else if (startsWith(cmd->c_str(), "./")) {
-                    char* buffer = cmd->c_str() + 2;
-                    int size = cmd->size() - 2;
+                } else if (startsWith(cmd->c_str(), "./") || startsWith(cmd->c_str(), "*./")) {
+                    bool forceExecute = startsWith(cmd->c_str(), "*./");
+                    char* buffer = cmd->c_str() + (forceExecute ? 3 : 2);
+                    int size = cmd->size() - (forceExecute ? 3 : 2);
 
                     auto node = Terminal::VFS::VirtualFS::sharedVFS()->fetch(SecuredString::fromBufferUnsafe(buffer));
                     if (node == nullptr) {
                         Terminal::Screen::write("le: ");
                         Terminal::Screen::write(buffer, KDColorWhite, size);
                         Terminal::Screen::writeLn(" : no such executable file");
-                    } else if (!node->isExecutable()) {
+                    } else if (!node->isExecutable() && !forceExecute) {
                         Terminal::Screen::write("le: ");
                         Terminal::Screen::write(buffer, KDColorWhite, size);
                         Terminal::Screen::writeLn(" : not a executable file");
@@ -81,7 +93,7 @@ void terminal_main(int argc, const char * const argv[]) {
                         if (!allocateHeap()) {
                             Terminal::Screen::writeLn("le: failed to allocate heap : not enough memory available");
                         } else {
-                            int exitCode = node->execute();
+                            int exitCode = node->execute(forceExecute);
                             // Freeing the heap
                             freeHeap();
 
@@ -122,6 +134,8 @@ void terminal_main(int argc, const char * const argv[]) {
                 DEFCMD("users", command_users)
                 DEFCMD("id", command_id)
                 DEFCMD("neofetch", command_neofetch)
+                DEFCMD("daemon", command_daemon)
+                DEFCMD("chmod", command_chmod)
                 else {
                     if (argList->at(0)->size() == 0) continue;
                     Terminal::Screen::write("le: ");
@@ -146,4 +160,5 @@ void terminal_main(int argc, const char * const argv[]) {
         Terminal::Screen::keyEnd();
         argList->dispose();
     }
+    Terminal::Background::Hell::shared()->dispatchStop();
 }

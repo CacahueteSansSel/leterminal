@@ -78,11 +78,11 @@ bool fileAtIndex(size_t index, File &entry) {
 extern "C" void (* const apiPointers[])(void);
 typedef uint32_t (*entrypoint)(const uint32_t, const void *, void *, const uint32_t);
 
-uint32_t executeFile(const char *name, void * heap, const uint32_t heapSize) {
+uint32_t executeFile(const char *name, void * heap, const uint32_t heapSize, bool force) {
   File entry;
   if(fileAtIndex(indexFromName(name), entry)) {
-    if(!entry.isExecutable) {
-      return 0;
+    if(!entry.isExecutable && !force) {
+      return 2;
     }
     uint32_t ep = *reinterpret_cast<const uint32_t*>(entry.data);
     if(ep >= 0x90200000 && ep < 0x90800000) {

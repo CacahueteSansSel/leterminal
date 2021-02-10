@@ -94,7 +94,8 @@ class VFSNode {
     virtual VFSNode* parent() {return m_parent;}
 
     virtual bool isExecutable() {return false;}
-    virtual int execute() {return EEXTNOTEXECUTABLE;}
+    virtual void setExecutable(bool executable) {}
+    virtual int execute(bool force) {return EEXTNOTEXECUTABLE;}
 
     private:
     SecuredString* m_name;

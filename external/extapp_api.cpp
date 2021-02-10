@@ -272,45 +272,61 @@ const int16_t translated_keys[] =
 #define TICKS_PER_MINUTE 11862
 #endif
 
+// TODO : Fix this method
 int extapp_getKey(bool allowSuspend, bool *alphaWasActive) {
-  int key = -1;
-  size_t t1 = Ion::Timing::millis();
-  for (;;) {
-    int timeout = 10000;
-    if(alphaWasActive) {
-      *alphaWasActive = Ion::Events::isAlphaActive();
-    }
-    Ion::Events::Event event = Ion::Events::getEvent(&timeout);
-    reloadTitleBar();
-    if (event == Ion::Events::None) {
-      size_t t2 = Ion::Timing::millis();
-      if (t2 - t1 > 2 * TICKS_PER_MINUTE) {
-        event = Ion::Events::OnOff;
-      }
-    } else {
-      t1 = Ion::Timing::millis();
-    }
-    if (event.isKeyboardEvent()) {
-      Ion::Backlight::setBrightness(GlobalPreferences::sharedGlobalPreferences()->brightnessLevel());
-    }
-    if (event == Ion::Events::Shift || event == Ion::Events::Alpha) {
-      continue;
-    }
-    if (event.isKeyboardEvent()) {
-      key = event.id();
-      if (key == 17 || key == 4 || key == 5 || key == 52) {
-        extapp_resetKeyboard();
-      }
-      if (allowSuspend && (key == 7 || key == 8)) { // power
-        Ion::Power::suspend(true);
-        extapp_pushRectUniform(0, 0, 320, 240, 65535);
-        Ion::Backlight::setBrightness(GlobalPreferences::sharedGlobalPreferences()->brightnessLevel());
-        reloadTitleBar();
-      }
-      break;
-    }
-  }
-  return translated_keys[key];
+  // size_t t1 = Ion::Timing::millis();
+  // int key = 0;
+  // for (;;) {
+  //   int timeout = 10000;
+  //   if(alphaWasActive) {
+  //     *alphaWasActive = Ion::Events::isAlphaActive();
+  //   }
+  //   Ion::Events::Event event = Ion::Events::getEvent(&timeout);
+  //   reloadTitleBar();
+  //   if (event == Ion::Events::None) {
+  //     size_t t2 = Ion::Timing::millis();
+  //     if (t2 - t1 > 2 * TICKS_PER_MINUTE) {
+  //       event = Ion::Events::OnOff;
+  //     }
+  //   } else {
+  //     t1 = Ion::Timing::millis();
+  //   }
+  //   if (event.isKeyboardEvent()) {
+  //     Ion::Backlight::setBrightness(GlobalPreferences::sharedGlobalPreferences()->brightnessLevel());
+  //   }
+  //   if (event == Ion::Events::Shift || event == Ion::Events::Alpha) {
+  //     continue;
+  //   }
+  //   if (event.isKeyboardEvent()) {
+  //     if (allowSuspend && event == Ion::Events::Power) { // power
+  //       Ion::Power::suspend(true);
+  //       extapp_pushRectUniform(0, 0, 320, 240, 65535);
+  //       Ion::Backlight::setBrightness(GlobalPreferences::sharedGlobalPreferences()->brightnessLevel());
+  //       reloadTitleBar();
+  //     }
+  //     break;
+  //   }
+  // }
+  // return translated_keys[key];
+  return -1;
+}
+
+// L.E. Terminal specific methods
+
+void extapp_let_write(const char* text, uint32_t back, uint32_t fore) {
+  KDColor backCol = KDColor::RGB24(back);
+  KDColor foreCol = KDColor::RGB24(fore);
+
+  Terminal::Screen::writeB(text, foreCol, backCol);
+}
+
+void extapp_let_newline() {
+  Terminal::Screen::newLine();
+}
+
+void extapp_let_setcursor(uint16_t x, uint16_t y) {
+  Terminal::Screen::posX = x;
+  Terminal::Screen::posY = y;
 }
 
 extern "C" void (* const apiPointers[])(void) = {
@@ -333,5 +349,8 @@ extern "C" void (* const apiPointers[])(void) = {
   (void (*)(void)) extapp_lockAlpha,
   (void (*)(void)) extapp_resetKeyboard,
   (void (*)(void)) extapp_getKey,
+  (void (*)(void)) extapp_let_write,
+  (void (*)(void)) extapp_let_newline,
+  (void (*)(void)) extapp_let_setcursor,
   (void (*)(void)) nullptr,
 };

@@ -254,4 +254,8 @@ EXTERNC void extapp_lockAlpha();
 EXTERNC void extapp_resetKeyboard();
 EXTERNC int extapp_getKey(bool allowSuspend, bool *alphaWasActive);
 
+EXTERNC void extapp_let_write(const char *text, uint32_t back, uint32_t fore);
+EXTERNC void extapp_let_newline();
+EXTERNC void extapp_let_setcursor(uint16_t x, uint16_t y);
+
 #endif
