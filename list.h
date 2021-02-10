@@ -137,6 +137,7 @@ class VolatileUInt8List {
     VolatileUInt8List() {}
 
     int count() {return m_counter;}
+    int aliveCount();
     int nextEmptySpaceIndex();
     uint8_t at(int index) {return list[index];}
     bool any(uint8_t item);

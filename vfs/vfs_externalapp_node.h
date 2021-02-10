@@ -28,10 +28,11 @@ class ExternalAppNode : public VFSNode {
     int dataLength() override {return (int)m_file.dataLength;}
     const void* data() override {return m_file.data;}
     bool isExecutable() override {return m_file.isExecutable;}
-    int execute() override {
-        if (!isExecutable()) return EEXTNOTEXECUTABLE;
+    void setExecutable(bool exec) override {m_file.isExecutable = exec;}
+    int execute(bool force) override {
+        if (!isExecutable() && !force) return EEXTNOTEXECUTABLE;
 
-        return External::Archive::executeFile(m_file.name, external_heap, HEAP_SIZE);
+        return External::Archive::executeFile(m_file.name, external_heap, HEAP_SIZE, force);
     }
 
     bool write(VFSNode* node) override {

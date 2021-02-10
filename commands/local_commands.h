@@ -33,6 +33,7 @@ void command_matrix(SecuredStringList* args) {
 
         Terminal::Screen::newLine();
         Terminal::Screen::redraw();
+        Terminal::Background::Hell::shared()->dispatchUpdate();
     }
     Terminal::Screen::clear();
     Terminal::Screen::posX = 0;

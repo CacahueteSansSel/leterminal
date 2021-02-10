@@ -120,6 +120,15 @@ void VolatileUInt8List::clear() {
     m_counter = 0;
 }
 
+int VolatileUInt8List::aliveCount() {
+    int counter = 0;
+    for (int i = 0; i < m_counter; i++) {
+        if (list[i] != 0) counter++;
+    }
+
+    return counter;
+}
+
 int VolatileUInt8List::nextEmptySpaceIndex() {
     for (int i = 0; i < m_counter; i++) if (list[i] == 0) return i;
     

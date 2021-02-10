@@ -14,6 +14,10 @@
 #include "../firmware.h"
 #include "../vfs/vfs.h"
 #include "../palette.h"
+#include "../daemons/daemon.h"
+#include "../daemons/led_update_daemon.h"
+#include "../daemons/powercheck_daemon.h"
+#include "../daemons/sleep_daemon.h"
 
 void command_uname(SecuredStringList* args) {
     if (check(args->at(1), "-a")) {
@@ -167,6 +171,7 @@ void command_ls(SecuredStringList* args) {
     }
 
     for (int i = 0; i < node->childCount(); i++) {
+        if (node->provideChild(i) == nullptr) continue;
         if (longListing) {
             Terminal::Screen::write("  | ");
             Terminal::Screen::write(node->provideChild(i)->isExecutable() ? "x " : "- ");
@@ -535,6 +540,75 @@ void command_mkdir(SecuredStringList* args) {
         return;
     }
     Terminal::VFS::VirtualFS::sharedVFS()->mount(new Terminal::VFS::VFSNode(args->at(1)->c_str()));
+}
+
+// Usage : 
+// daemon
+// -> Displays all running daemons
+// -------------------------------
+// daemon kill <daemon-name>
+// -> Kill the daemon named <daemon-name>
+// -------------------------------
+// daemon summon <daemon-name>
+// -> Summon a daemon
+// -------------------------------
+void command_daemon(SecuredStringList* args) {
+    Terminal::Background::Hell* hell = Terminal::Background::Hell::shared();
+
+    if (args->count() == 1) {
+        Terminal::Screen::writeLn("List of running daemons :");
+        for (int i = 0; i < hell->runningCount(); i++) {
+            if (hell->at(i) == nullptr) continue;
+            Terminal::Screen::write("  | ");
+            Terminal::Screen::write(hell->at(i)->name());
+            Terminal::Screen::newLine();
+        }
+    } else if (args->at(1)->matches("kill")) {
+        SecuredString* daemonName = args->at(2);
+        bool success = hell->kill(daemonName);
+        if (!success) Terminal::Screen::writeLn("daemon: unable to kill this daemon");
+    } else if (args->at(1)->matches("summon")) {
+        SecuredString* daemonName = args->at(2);
+
+        // TODO : Please change this piece of garbage by a sweet auto-fetching system
+        Terminal::Background::Daemon* daemon;
+        if (daemonName->matches("led-update")) {
+            daemon = new Terminal::Background::LEDUpdateDaemon();
+        } else if (daemonName->matches("power-check")) {
+            daemon = new Terminal::Background::PowerCheckDaemon();
+        } else if (daemonName->matches("auto-sleep")) {
+            daemon = new Terminal::Background::SleepDaemon();
+        }
+
+        bool success = hell->summon(daemon);
+        if (!success) Terminal::Screen::writeLn("daemon: unable to summon this daemon");
+    } else {
+        Terminal::Screen::write("daemon: unknown option: ");
+        Terminal::Screen::write(args->at(1));
+        Terminal::Screen::newLine();
+    }
+}
+
+void command_chmod(SecuredStringList* args) {
+    if (args->count() != 3) {
+        Terminal::Screen::writeLn("usage: chmod (flags) <file>");
+        return;
+    }
+
+    auto file = args->at(2);
+    if (args->at(1)->matches("+x")) {
+        auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(file);
+        if (fileNode == nullptr) return;
+        fileNode->setExecutable(true);
+    } else if (args->at(1)->matches("-x")) {
+        auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(file);
+        if (fileNode == nullptr) return;
+        fileNode->setExecutable(false);
+    } else {
+        Terminal::Screen::write("chmod: unknown flag: ");
+        Terminal::Screen::write(args->at(1));
+        Terminal::Screen::newLine();
+    }
 }
 
 #endif

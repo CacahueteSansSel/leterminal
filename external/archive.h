@@ -19,7 +19,7 @@ struct File {
 bool fileAtIndex(size_t index, File &entry);
 int indexFromName(const char *name);
 size_t numberOfFiles();
-uint32_t executeFile(const char *name, void * heap, const uint32_t heapSize);
+uint32_t executeFile(const char *name, void * heap, const uint32_t heapSize, bool force);
 
 }
 }
