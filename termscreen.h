@@ -116,7 +116,6 @@ static bool operator==(terminal_cell_t left, terminal_cell_t right) {
 }
 
 static terminal_cell_t Screen[CharWidth * CharHeight];
-static terminal_cell_t screenInternal[CharWidth * CharHeight];
 
 #define LMAP(key, nonshift, shift, alpha, alphacaps) if (keyPressed(key)) { \
 if (Terminal::Keyboard::isShift()) { buffer[ptr] = shift; writeChar(settings->doHideText() ? '*' : shift); ptr++; redraw(); } \
@@ -220,8 +219,6 @@ static void redraw(bool complete = false) {
     {
         for (int x = 0; x < CharWidth; x++) {
             terminal_cell_t cell = Screen[y * CharWidth + x];
-            if (cell == screenInternal[y * CharWidth + x] && !complete) continue;
-            screenInternal[y * CharWidth + x] = cell;
             KDRect screenRect = KDRect(x * 8, y * 12, 8, 12);
             switch (cell.backStyle) {
                 case TerminalCellBackground::Fill:

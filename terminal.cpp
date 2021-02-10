@@ -12,13 +12,11 @@
 #include "firmware.h"
 #include "vfs/vfs.h"
 #include "events.h"
-#include "external/heap.h"
 #include "palette.h"
 #include "daemons/daemon.h"
 #include "daemons/powercheck_daemon.h"
 #include "daemons/sleep_daemon.h"
 #include "daemons/led_update_daemon.h"
-#include "splashes.h"
 
 #include "commands/local_commands.h"
 #ifndef LOCAL_COMMANDS
@@ -47,7 +45,7 @@ void terminal_main(int argc, const char * const argv[]) {
     Terminal::Screen::newLine();
 
     SecuredStringList* argList = new SecuredStringList();
-    static char commandBuffer[256];
+    static char commandBuffer[64];
     while (true) {
         Terminal::Screen::keyRead();
 
@@ -74,40 +72,6 @@ void terminal_main(int argc, const char * const argv[]) {
             if (ExceptionRun(ecp)) {
                 if (check(cmd, "exit")) {
                     return;
-                } else if (startsWith(cmd->c_str(), "./") || startsWith(cmd->c_str(), "*./")) {
-                    bool forceExecute = startsWith(cmd->c_str(), "*./");
-                    char* buffer = cmd->c_str() + (forceExecute ? 3 : 2);
-                    int size = cmd->size() - (forceExecute ? 3 : 2);
-
-                    auto node = Terminal::VFS::VirtualFS::sharedVFS()->fetch(SecuredString::fromBufferUnsafe(buffer));
-                    if (node == nullptr) {
-                        Terminal::Screen::write("le: ");
-                        Terminal::Screen::write(buffer, KDColorWhite, size);
-                        Terminal::Screen::writeLn(" : no such executable file");
-                    } else if (!node->isExecutable() && !forceExecute) {
-                        Terminal::Screen::write("le: ");
-                        Terminal::Screen::write(buffer, KDColorWhite, size);
-                        Terminal::Screen::writeLn(" : not a executable file");
-                    } else {
-                        // Allocating the heap
-                        if (!allocateHeap()) {
-                            Terminal::Screen::writeLn("le: failed to allocate heap : not enough memory available");
-                        } else {
-                            int exitCode = node->execute(forceExecute);
-                            // Freeing the heap
-                            freeHeap();
-
-                            Terminal::Screen::write(buffer, KDColorWhite, size);
-                            Terminal::Screen::write(": exit (");
-                            Terminal::Screen::writeChar(intToString(exitCode));
-                            Terminal::Screen::write(")");
-                            Terminal::Screen::newLine();
-                        }
-                    }
-                    Ion::LED::updateColorWithPlugAndCharge();
-                    Terminal::Screen::keyEnd();
-                    argList->dispose();
-                    continue;
                 }
                 LOCAL_COMMANDS
                 DEFCMD("uname", command_uname)
