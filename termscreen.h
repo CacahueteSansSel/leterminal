@@ -11,6 +11,8 @@
 #include "palette.h"
 #include "daemons/daemon.h"
 
+#define IS_BIT(var,pos) ((var) & (1<<(pos)))
+
 namespace Terminal {
 
 static bool isLaunchedFromFirmware = false;
@@ -166,12 +168,13 @@ static void drawChar(KDContext* ctx, char c, KDColor back, KDColor color, KDPoin
     if (c == '\0' || c == 0) {
         return;
     }
+
+    uint32_t startPos = (uint8_t)(c) * 12;
     for (int y = 0; y < 12; y++) {
+        uint8_t line = (uint8_t)Font::generatedGlyphData[startPos + y];
         for (int x = 0; x < 8; x++) {
-            uint8_t alpha = Font::generatedGlyphData[(uint8_t)(c) * 96 + (y * 8 + x)];
-            if (alpha != 0xFF) continue;
-            
-            ctx->setPixel(pos.translatedBy(KDPoint(x, y)), color);
+            bool set = IS_BIT(line, x);
+            if (set) ctx->setPixel(KDPoint(pos.x() + x, pos.y() + y), color);
         }
     }
 }
