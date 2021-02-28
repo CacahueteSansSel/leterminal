@@ -1,6 +1,6 @@
 #include "terminal.h"
-#include "../../ion/include/ion.h"
-#include "../../apps/global_preferences.h"
+#include <ion.h>
+#include <apps/global_preferences.h>
 #include "list.h"
 #include "stringx.h"
 #include "commands/commands.h"

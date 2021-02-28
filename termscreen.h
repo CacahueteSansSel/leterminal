@@ -215,6 +215,10 @@ static void redrawStatusBar() {
 
 static void redraw(bool complete = false) {
     KDContext* ctx = KDIonContext::sharedContext();
+    // Setting the clipping rect and origin in case we start the terminal from the firmware
+    // to take the entire screen
+    ctx->setClippingRect(KDRect(0, 0, 320, 240));
+    ctx->setOrigin(KDPointZero);
 
     redrawStatusBar();
 
