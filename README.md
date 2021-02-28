@@ -59,17 +59,27 @@ Here are the implemented commands :
 If you want to use *let* as a "subfirmware" (kind of a firmware in a firmware), follow these steps : 
 
 + Clone the source of the firmware you want to use (ex: [Epsilon](https://github.com/numworks/epsilon))
-+ Clone this repository in the `apps/terminal` folder of the firmware source (the `terminal` folder needs to be created, of course)
-+ Add the following line to the *makefile* `apps/Makefile` at the top : 
+```bash
+# Example
+$ git clone https://github.com/numworks/epsilon
+$ cd epsilon
 ```
++ Clone this repository in the `apps/terminal` folder of the firmware source (the `terminal` folder needs to be created, of course)
+```bash
+$ git clone https://github.com/CacahueteSansSel/leterminal apps/terminal
+#                                                          ^~~~~~~~~~~~~
+#                                                          Important!
+```
++ Add the following line to the *makefile* `apps/Makefile` at the top : 
+```cpp
 include apps/terminal/Makefile
 ```
 + Go to the `main.cpp` file and add this line to the top :
-```
+```cpp
 #include "terminal/startup.h"
 ```
 + In the same file, call the terminal's main function right below `Poincare::Init();` : 
-```
+```cpp
 void ion_main(int argc, const char * const argv[]) {
   // Initialize Poincare::TreePool::sharedPool
   Poincare::Init();
