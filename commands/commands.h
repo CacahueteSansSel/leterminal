@@ -3,11 +3,11 @@
 #include "../list.h"
 #include "../termscreen.h"
 #include "../stringx.h"
-#include "../../code/script_template.h"
-#include "../../code/script.h"
+#include <apps/code/script_template.h>
+#include <apps/code/script.h>
 #include <poincare_layouts.h>
 #include <poincare_nodes.h>
-#include "../../shared/poincare_helpers.h"
+#include <apps/shared/poincare_helpers.h>
 #include <poincare/init.h>
 #include <poincare/exception_checkpoint.h>
 #include "../system/users.h"

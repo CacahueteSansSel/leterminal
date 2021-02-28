@@ -4,9 +4,9 @@
 #include <kandinsky.h>
 
 #define FIRMWARE_NAME "Sigma"
-#define FIRMWARE_VERSION Sigmap::sigmaVersion
-#define FIRMWARE_BRANCH Sigmap::sigmaBranch
-#define FIRMWARE_BRANCH_COLOR Sigmap::sigmaBranchColor
+#define FIRMWARE_VERSION SIGMA_VERSION
+#define FIRMWARE_BRANCH SIGMA_BRANCH
+#define FIRMWARE_BRANCH_COLOR SIGMA_BRANCH_COLOR
 #define FIRMWARE_MAIN_COLOR Palette::SigmaPurple
 
 #define NEOFETCH_LOGO_WIDTH 12
