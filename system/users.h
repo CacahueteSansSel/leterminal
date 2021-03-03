@@ -33,7 +33,7 @@ class User {
 
 class UsersRepository {
     public:
-    UsersRepository() : m_userPointer(0), m_currentUserIndex(1), m_alreadyAddedDefaultUsers(false) {}
+    UsersRepository() {}
 
     static UsersRepository* sharedRepository() {
         static UsersRepository rep;
@@ -81,10 +81,12 @@ class UsersRepository {
     bool m_alreadyAddedDefaultUsers;
     void setupDefaultUsers() {
         if (m_alreadyAddedDefaultUsers) return;
-        addUser(new User(SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
         addUser(new User(SecuredString::fromBufferUnsafe("cacahuete"), ExecutionLevel::Normal));
         addUser(new User(SecuredString::fromBufferUnsafe("boat"), ExecutionLevel::Low));
         addUser(new User(SecuredString::fromBufferUnsafe("coconut"), ExecutionLevel::High));
+        addUser(new User(SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
+
+        m_currentUserIndex = 0;
         m_alreadyAddedDefaultUsers = true;
     }
     int m_currentUserIndex;
