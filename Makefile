@@ -3,3 +3,15 @@ apps_src += $(addprefix apps/terminal/,\
   software/kilo.cpp \
   list.cpp \
 )
+
+ifeq ($(FIRMWARE),sigma)
+	SFLAGS += -DSIGMA
+else
+
+ifeq ($(FIRMWARE),omega)
+	SFLAGS += -DOMEGA
+else
+  SFLAGS += -DEPSILON
+endif
+
+endif
