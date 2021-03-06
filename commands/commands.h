@@ -18,6 +18,7 @@
 #include "../daemons/led_update_daemon.h"
 #include "../daemons/powercheck_daemon.h"
 #include "../daemons/sleep_daemon.h"
+#include "../lecurses.h"
 
 void command_uname(SecuredStringList* args) {
     if (check(args->at(1), "-a")) {
@@ -78,7 +79,7 @@ void command_history(SecuredStringList* args) {
 }
 
 void command_whoami(SecuredStringList* args) {
-    Terminal::Screen::writeLn(UsersRepository::sharedRepository()->current()->name());
+    Terminal::Screen::writeLn(Terminal::Users::currentUser()->name());
 }
 
 // 'ion' command
@@ -94,7 +95,7 @@ void command_ion(SecuredStringList* args) {
         Ion::Power::suspend();
         Terminal::Screen::redraw(true);
     } else if (check(args->at(1), "-D")) {
-        if (UsersRepository::sharedRepository()->current()->level() != ExecutionLevel::Root) {
+        if (Terminal::Users::currentUser()->level() != ExecutionLevel::Root) {
             Terminal::Screen::writeLn("ion: access denied");
             return;
         }
@@ -103,16 +104,13 @@ void command_ion(SecuredStringList* args) {
             return;
         }
         Ion::USB::enable();
-        Terminal::Screen::writeLn("USB enabled", KDColorWhite);
-        Terminal::Screen::writeLn("--- Entering DFU mode (calculator is now frozen) ---", TerminalYellow);
-        Terminal::Screen::writeLn("Press [BACK] to cancel", KDColorWhite);
+        LECurses::popup(Terminal::Strings::dfuMode(), false, false);
         Ion::USB::DFU();
+        Terminal::Screen::clear();
         Ion::LED::updateColorWithPlugAndCharge();
-        Terminal::Screen::writeLn("Left DFU mode", KDColorWhite);
         Ion::USB::disable();
-        Terminal::Screen::writeLn("USB disabled", KDColorWhite);
     } else if (check(args->at(1), "-S")) {
-        if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::High) {
+        if (Terminal::Users::currentUser()->level() < ExecutionLevel::High) {
             Terminal::Screen::writeLn("ion: access denied");
             return;
         }
@@ -161,7 +159,7 @@ void command_ion(SecuredStringList* args) {
 void command_ls(SecuredStringList* args) {
     bool longListing = args->count() > 1 && args->at(1)->matches("-l"); 
 
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("ls: current VFS node is nullptr");
         return;
@@ -194,12 +192,12 @@ void command_rm(SecuredStringList* args) {
         Terminal::Screen::writeLn("rm: no filename specified");
         return;
     }
-    if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::Normal) {
+    if (Terminal::Users::currentUser()->level() < ExecutionLevel::Normal) {
         Terminal::Screen::writeLn("rm: access denied");
         return;
     }
     
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("rm: current VFS node is nullptr");
         return;
@@ -217,12 +215,12 @@ void command_touch(SecuredStringList* args) {
         Terminal::Screen::writeLn("touch: no filename specified");
         return;
     }
-    if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::Normal) {
+    if (Terminal::Users::currentUser()->level() < ExecutionLevel::Normal) {
         Terminal::Screen::writeLn("touch: access denied");
         return;
     }
     
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("touch: current VFS node is nullptr");
         return;
@@ -244,7 +242,7 @@ void command_cp(SecuredStringList* args) {
         Terminal::Screen::writeLn("usage : cp <from> <to>");
         return;
     }
-    if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::Normal) {
+    if (Terminal::Users::currentUser()->level() < ExecutionLevel::Normal) {
         Terminal::Screen::writeLn("cp: access denied");
         return;
     }
@@ -252,7 +250,7 @@ void command_cp(SecuredStringList* args) {
     auto from = args->at(1);
     auto to = args->at(2);
     
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("cp: current VFS node is nullptr");
         return;
@@ -261,7 +259,7 @@ void command_cp(SecuredStringList* args) {
         return;
     }
 
-    auto originNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(from);
+    auto originNode = Terminal::VFS::fetch(from);
     if (originNode->type() != Terminal::VFS::VFSNodeType::Data) {
         Terminal::Screen::writeLn("cp: input node is not a file");
         return;
@@ -283,12 +281,12 @@ bool writeTemplate(Terminal::VFS::VFSNode* node, const Code::ScriptTemplate* scr
 // pyscr command
 // Creates the default python scripts found in epsilon
 void command_pyscr(SecuredStringList* args) {
-    if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::Normal) {
+    if (Terminal::Users::currentUser()->level() < ExecutionLevel::Normal) {
         Terminal::Screen::writeLn("pyscr: access denied");
         return;
     }
     
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("pyscr: current VFS node is nullptr");
         return;
@@ -304,7 +302,7 @@ void command_pyscr(SecuredStringList* args) {
 }
 
 void command_cat(SecuredStringList* args) {
-    if (UsersRepository::sharedRepository()->current()->level() < ExecutionLevel::Normal) {
+    if (Terminal::Users::currentUser()->level() < ExecutionLevel::Normal) {
         Terminal::Screen::writeLn("cat: access denied");
         return;
     }
@@ -313,7 +311,7 @@ void command_cat(SecuredStringList* args) {
         return;
     }
     
-    auto node = Terminal::VFS::VirtualFS::sharedVFS()->current();
+    auto node = Terminal::VFS::current();
     if (node == nullptr) {
         Terminal::Screen::writeLn("cat: current VFS node is nullptr");
         return;
@@ -322,7 +320,7 @@ void command_cat(SecuredStringList* args) {
         return;
     }
 
-    auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(args->at(1));
+    auto fileNode = Terminal::VFS::fetch(args->at(1));
     if (fileNode == nullptr) {
         Terminal::Screen::writeLn("cat: no such file or directory");
         return;
@@ -388,7 +386,7 @@ void command_poincare(SecuredStringList* args) {
 void command_su(SecuredStringList* args) {
     if (args->count() == 1) {
         // Login into root
-        bool result = UsersRepository::sharedRepository()->switchUser(SecuredString::fromBufferUnsafe("root"));
+        bool result = Terminal::Users::switchUser(Terminal::Users::getUserUidFromUsername(SecuredString::fromBufferUnsafe("root")));
         if (!result) {
             Terminal::Screen::writeLn("su: root: unable to login");
             return;
@@ -397,7 +395,7 @@ void command_su(SecuredStringList* args) {
     }
 
     SecuredString* name = args->at(1);
-    bool result = UsersRepository::sharedRepository()->switchUser(name);
+    bool result = Terminal::Users::switchUser(Terminal::Users::getUserUidFromUsername(name));
     if (!result) {
         Terminal::Screen::write("su: ");
         Terminal::Screen::write(name);
@@ -407,7 +405,7 @@ void command_su(SecuredStringList* args) {
 }
 
 void command_useradd(SecuredStringList* args) {
-    if (UsersRepository::sharedRepository()->current()->level() != ExecutionLevel::Root) {
+    if (Terminal::Users::currentUser()->level() != ExecutionLevel::Root) {
         Terminal::Screen::writeLn("useradd: access denied");
         return;
     }
@@ -429,14 +427,17 @@ void command_useradd(SecuredStringList* args) {
         level = ExecutionLevel::Root;
     }
 
-    bool result = UsersRepository::sharedRepository()->addUser(new User(username, level));
+    bool result = Terminal::Users::add(new User(username, level));
     if (!result) {
         Terminal::Screen::writeLn("useradd: unable to add user");
+    } else {
+        Terminal::Screen::write("+ ", KDColorGreen);
+        Terminal::Screen::writeLn(username);
     }
 }
 
 void command_id(SecuredStringList* args) {
-    User* usr = UsersRepository::sharedRepository()->current();
+    User* usr = Terminal::Users::currentUser();
 
     static SecuredString* levelStr;
     if (usr->level() == ExecutionLevel::Low) levelStr = SecuredString::fromBufferUnsafe("low");
@@ -459,8 +460,8 @@ void command_id(SecuredStringList* args) {
 
 void command_users(SecuredStringList* args) {
     bool detailed = args->count() > 1 && *args->at(1) == *SecuredString::fromBufferUnsafe("-d");
-    for (int i = 0; i < UsersRepository::sharedRepository()->count(); i++) {
-        User* usr = UsersRepository::sharedRepository()->at(i);
+    for (useruid_t i = 0; i < Terminal::Users::count(); i++) {
+        User* usr = Terminal::Users::at(i);
         if (detailed) {
             SecuredString* levelStr;
             if (usr->level() == ExecutionLevel::Low) levelStr = SecuredString::fromBufferUnsafe("low");
@@ -469,8 +470,8 @@ void command_users(SecuredStringList* args) {
             else if (usr->level() == ExecutionLevel::Root) levelStr = SecuredString::fromBufferUnsafe("root");
             else levelStr = SecuredString::fromBufferUnsafe("unknown");
             Terminal::Screen::write(" |  uid=");
-            Terminal::Screen::writeChar(intToString(usr->uid()));
-            Terminal::Screen::write("(");
+            Terminal::Screen::writeChar(uintToString(usr->uid()));
+            Terminal::Screen::write(" (");
             Terminal::Screen::write(usr->name());
             Terminal::Screen::write(")");
             Terminal::Screen::write(" level=");
@@ -493,7 +494,7 @@ void command_neofetch(SecuredStringList* args) {
 
     Terminal::Screen::writeBitmap(neofetch_logo, NEOFETCH_LOGO_WIDTH, NEOFETCH_LOGO_HEIGHT, FIRMWARE_MAIN_COLOR);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
-    Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), FIRMWARE_MAIN_COLOR);
+    Terminal::Screen::write(Terminal::Users::currentUser()->name(), FIRMWARE_MAIN_COLOR);
     Terminal::Screen::writeLn("@numworks", FIRMWARE_MAIN_COLOR);
     Terminal::Screen::posX = NEOFETCH_LOGO_WIDTH;
     Terminal::Screen::writeLn("-----------------------", KDColorWhite);
@@ -528,10 +529,13 @@ void command_cd(SecuredStringList* args) {
         return;
     }
     if (check(args->at(1), "..")) {
-        Terminal::VFS::VirtualFS::sharedVFS()->goBackwards();
+        Terminal::VFS::goBackwards();
         return;
     }
-    Terminal::VFS::VirtualFS::sharedVFS()->warp(args->at(1)->c_str());
+    bool success = Terminal::VFS::warp(args->at(1)->c_str());
+    if (!success) {
+        Terminal::Screen::writeLn("cd: unable to warp to the specified destination");
+    }
 }
 
 void command_mkdir(SecuredStringList* args) {
@@ -539,7 +543,7 @@ void command_mkdir(SecuredStringList* args) {
         Terminal::Screen::writeLn("usage: mkdir <name>");
         return;
     }
-    Terminal::VFS::VirtualFS::sharedVFS()->mount(new Terminal::VFS::VFSNode(args->at(1)->c_str()));
+    Terminal::VFS::mount(new Terminal::VFS::VFSNode(args->at(1)->c_str()));
 }
 
 // Usage : 
@@ -597,11 +601,11 @@ void command_chmod(SecuredStringList* args) {
 
     auto file = args->at(2);
     if (args->at(1)->matches("+x")) {
-        auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(file);
+        auto fileNode = Terminal::VFS::fetch(file);
         if (fileNode == nullptr) return;
         fileNode->setExecutable(true);
     } else if (args->at(1)->matches("-x")) {
-        auto fileNode = Terminal::VFS::VirtualFS::sharedVFS()->fetch(file);
+        auto fileNode = Terminal::VFS::fetch(file);
         if (fileNode == nullptr) return;
         fileNode->setExecutable(false);
     } else {
@@ -609,6 +613,15 @@ void command_chmod(SecuredStringList* args) {
         Terminal::Screen::write(args->at(1));
         Terminal::Screen::newLine();
     }
+}
+
+void command_popup(SecuredStringList* args) {
+    if (args->count() < 2) {
+        Terminal::Screen::writeLn("usage: popup <text> [-ok]");
+        return;
+    }
+
+    LECurses::popup(args->at(1), args->count() > 2 && args->at(2)->matches("-ok"));
 }
 
 #endif

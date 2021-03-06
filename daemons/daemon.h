@@ -25,8 +25,10 @@ class Hell {
     public:
 
     Hell() {}
+
     static Hell* shared() {
         static Hell hell;
+
         return &hell;
     }
 

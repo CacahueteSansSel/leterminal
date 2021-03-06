@@ -10,7 +10,7 @@
 #define FIRMWARE_MAIN_COLOR Palette::SigmaPurple
 
 #define NEOFETCH_LOGO_WIDTH 12
-#define NEOFETCH_LOGO_HEIGHT 16
+#define NEOFETCH_LOGO_HEIGHT 13
 
 static bool neofetch_logo[] = {
     false, true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  false,

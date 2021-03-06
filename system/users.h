@@ -1,8 +1,12 @@
 #ifndef TERMINAL_USERS
 #define TERMINAL_USERS
+#include "../list.h"
 #include "../stringx.h"
 
-#define MAX_USER_COUNT 32
+#define MAX_USER_COUNT 16
+
+typedef uint32_t useruid_t;
+#define USERUID_INVALID (useruid_t)255
 
 enum class ExecutionLevel {
     Low,
@@ -15,83 +19,34 @@ class User {
     private:
     SecuredString* m_name;
     ExecutionLevel m_level;
-    int m_uid;
+    useruid_t m_uid;
 
     public:
-    User(SecuredString* name, ExecutionLevel level) : m_name(name), m_level(level), m_uid(-1)
+    User(SecuredString* name, ExecutionLevel level) : m_name(name), m_level(level), m_uid(USERUID_INVALID)
     {}
 
-    void setUid(int uid) {
-        if (m_uid >= 0) return;
-
-        m_uid = uid;
-    }
+    void setUid(useruid_t uid);
     SecuredString* name() {return m_name;}
     ExecutionLevel level() {return m_level;}
-    int uid() {return m_uid;}
+    useruid_t uid() {return m_uid;}
 };
 
-class UsersRepository {
-    public:
-    UsersRepository() {}
+namespace Terminal {
 
-    static UsersRepository* sharedRepository() {
-        static UsersRepository rep;
-        rep.setupDefaultUsers();
-        return &rep;
-    }
+namespace Users {
+    
+void init();
+User* at(useruid_t uid);
+uint32_t count();
+useruid_t getUserUidFromUsername(SecuredString* name);
+useruid_t currentUid();
+User* currentUser();
+bool add(User* user);
+bool remove(useruid_t uid);
+bool switchUser(useruid_t uid);
 
-    User* current() {return m_users[m_currentUserIndex];}
-    User* at(int index) {
-        if (index >= m_userPointer) return nullptr;
-        return m_users[index];
-    }
-    int count() {return m_userPointer;}
+}
 
-    int indexOfUsername(SecuredString* name) {
-        for (int i = 0; i < m_userPointer; i++) {
-            if (*name == *m_users[i]->name()) return i;
-        }
-
-        return -1;
-    }
-
-    bool switchUser(SecuredString* name) {
-        int index = indexOfUsername(name);
-        if (index < 0) return false;
-
-        m_currentUserIndex = index;
-        return true;
-    }
-
-    bool addUser(User* user) {
-        for (int i = 0; i < m_userPointer; i++) {
-            if (user->name() == m_users[i]->name()) return false;
-        }
-
-        if (m_userPointer >= MAX_USER_COUNT) return false;
-        m_users[m_userPointer] = user;
-        user->setUid(m_userPointer);
-        m_userPointer++;
-
-        return true;
-    }
-
-    private:
-    bool m_alreadyAddedDefaultUsers;
-    void setupDefaultUsers() {
-        if (m_alreadyAddedDefaultUsers) return;
-        addUser(new User(SecuredString::fromBufferUnsafe("cacahuete"), ExecutionLevel::Normal));
-        addUser(new User(SecuredString::fromBufferUnsafe("boat"), ExecutionLevel::Low));
-        addUser(new User(SecuredString::fromBufferUnsafe("coconut"), ExecutionLevel::High));
-        addUser(new User(SecuredString::fromBufferUnsafe("root"), ExecutionLevel::Root));
-
-        m_currentUserIndex = 0;
-        m_alreadyAddedDefaultUsers = true;
-    }
-    int m_currentUserIndex;
-    int m_userPointer;
-    User* m_users[MAX_USER_COUNT];
-};
+}
 
 #endif
