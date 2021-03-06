@@ -1,12 +1,8 @@
-### L.E. Terminal (Lightweight Emulated Terminal)
-
 ![Logo](res/logo.png)
 
 L.E. Terminal (*let* for short) is a little UNIX-inspired terminal for the Numworks Calculator. 
 
 ![Screenshot](res/screenshot.png)
-
-*It does not use escher (Numworks' GUI Library)*.
 
 ## Features
 
@@ -55,15 +51,17 @@ Here are the implemented commands :
 + `su` : means here **switch user**, who switches to **root** if no arguments passed, or the user who is passed in arguments (user name)
 + `useradd` : add an user to the user repository
 + `users` : list available users, use `-d` as argument for detailed output
++ `chmod` : modify the access flags of a file, only support execute flag (+x/-x) for now
++ `daemon` : list the currently running daemons
 
 ## Building instructions
 
-*Note : the terminal does not support the simulator*
+*Note : let does not support the simulator*
 
 ### As a "*subfirmware*"
 If you want to use *let* as a "subfirmware" (kind of a firmware in a firmware), follow these steps : 
 
-+ Clone the source of the firmware you want to use (ex: [Epsilon](https://github.com/numworks/epsilon))
++ Clone the source of the firmware you want to use (ex: [Epsilon](https://github.com/numworks/epsilon)) (for Omega, see **Sidenote for Omega** further down)
 ```bash
 # Example
 $ git clone https://github.com/numworks/epsilon
@@ -92,3 +90,17 @@ void ion_main(int argc, const char * const argv[]) {
   terminal_startup_check(argc, argv);
 ```
 And done ! You will be able to launch the terminal at startup when pressing the *HOME* key !
+
+#### Sidenote for including L.E. Terminal in Omega
+To avoid errors such as `cannot move location counter backwards` (issue #3), you will probably need to do an additional step for Omega : 
++ Decreasing the Python heap size (in `apps/code/app.h`) in order to give some room to *let*. `80000` is the recommended value, but you can try to go higher.
+
+At this line : 
+```cpp
+static constexpr int k_pythonHeapSize = 100000;
+```
+
+Replace `100000` to a lower value, example : 
+```cpp
+static constexpr int k_pythonHeapSize = 80000;
+```
