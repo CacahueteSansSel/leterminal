@@ -12,9 +12,9 @@ static void terminal_startup_check(int argc, const char * const argv[]) {
     for (int i = 0; i < 10; i++) {
         auto keys = Ion::Keyboard::scan();
         if (keys.keyDown(Ion::Keyboard::Key::Home)) {
-        // Launch terminal "subfirmware"
-        terminal_main(argc, argv);
-        break;
+            // Launch terminal "subfirmware"
+            terminal_main(argc, argv);
+            break;
         }
         Ion::Timing::msleep(100);
     }

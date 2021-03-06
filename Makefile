@@ -1,6 +1,10 @@
 apps_src += $(addprefix apps/terminal/,\
-  terminal.cpp \
+  system/users.cpp \
   software/kilo.cpp \
+  vfs/vfs.cpp \
+  strings.cpp \
+  stringx.cpp \
+  terminal.cpp \
   list.cpp \
 )
 

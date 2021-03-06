@@ -17,6 +17,7 @@
 #include "daemons/powercheck_daemon.h"
 #include "daemons/sleep_daemon.h"
 #include "daemons/led_update_daemon.h"
+#include "strings.h"
 
 #include "commands/local_commands.h"
 #ifndef LOCAL_COMMANDS
@@ -24,12 +25,15 @@
 #endif
 
 void terminal_main(int argc, const char * const argv[]) {
+    Terminal::Strings::init();
     Terminal::isLaunchedFromFirmware = argc > 0 && check(argv[0], "-firm");
 
     if (!Terminal::isLaunchedFromFirmware) Ion::Backlight::init();
     else Terminal::Screen::redraw(true);
 
     Ion::Display::pushRectUniform(KDRect(0, 0, 320, 240), KDColorBlack);
+    Terminal::VFS::init();
+    Terminal::Users::init();
 
     // Registering daemons
     Terminal::Background::Hell::shared()->summon(new Terminal::Background::PowerCheckDaemon());
@@ -37,10 +41,9 @@ void terminal_main(int argc, const char * const argv[]) {
     Terminal::Background::Hell::shared()->summon(new Terminal::Background::LEDUpdateDaemon());
 
     Terminal::Background::Hell::shared()->dispatchInit();
-    Terminal::VFS::VirtualFS::sharedVFS()->init();
     Terminal::Screen::init();
     Terminal::Screen::clear();
-    Terminal::Screen::write("L.E. Terminal v", TerminalGreen);
+    Terminal::Screen::write(Terminal::Strings::leterminal_v(), TerminalGreen);
     Terminal::Screen::writeLn(TERMINAL_VERSION, TerminalGreen);
     Terminal::Screen::newLine();
 
@@ -52,9 +55,9 @@ void terminal_main(int argc, const char * const argv[]) {
         if (GlobalPreferences::sharedGlobalPreferences()->isInExamMode()) {
             Terminal::Screen::write("EXAM ", TerminalIndigo);
         }
-        Terminal::Screen::write(UsersRepository::sharedRepository()->current()->name(), TerminalGreen);
+        Terminal::Screen::write(Terminal::Users::currentUser()->name(), TerminalGreen);
         Terminal::Screen::write("@numworks:", TerminalGreen);
-        Terminal::Screen::write(Terminal::VFS::VirtualFS::sharedVFS()->current()->name(), TerminalGreen);
+        Terminal::Screen::write(Terminal::VFS::current()->name(), TerminalGreen);
         Terminal::Screen::write(" $ ", TerminalBlue);
         int readCount = Terminal::Screen::readLn(commandBuffer);
 
@@ -100,6 +103,7 @@ void terminal_main(int argc, const char * const argv[]) {
                 DEFCMD("neofetch", command_neofetch)
                 DEFCMD("daemon", command_daemon)
                 DEFCMD("chmod", command_chmod)
+                DEFCMD("popup", command_popup)
                 else {
                     if (argList->at(0)->size() == 0) continue;
                     Terminal::Screen::write("le: ");

@@ -35,8 +35,10 @@ class VFSNode {
 
     virtual VFSNode* provideChild(const char* name) {
         if (type() != VFSNodeType::NodeContainer) return nullptr;
+        SecuredString* buff = SecuredString::fromBufferUnsafe((char*)name);
         for (int i = 0; i < childCount(); i++) {
-            if (check(children[i]->name(), SecuredString::fromBufferUnsafe((char*)name))) return children[i];
+            if (children[i] == nullptr) continue;
+            if (check(children[i]->name(), buff)) return children[i];
         }
 
         return nullptr;
@@ -70,6 +72,7 @@ class VFSNode {
     virtual bool remove(const char* name) {
         if (type() != VFSNodeType::NodeContainer) return false;
         for (int i = 0; i < childCount(); i++) {
+            if (children[i] == nullptr) continue;
             if (check(children[i]->name(), SecuredString::fromBufferUnsafe((char*)name))) {
                 children[i] = nullptr;
                 return true;

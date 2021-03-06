@@ -11,5 +11,7 @@ constexpr KDColor TerminalYellow = KDColor::RGB24(0xFFAF1C);
 constexpr KDColor TerminalBeige = KDColor::RGB24(0xFFAFA3);
 constexpr KDColor TerminalIndigo = KDColor::RGB24(0x424AA3);
 constexpr KDColor TerminalPink = KDColor::RGB24(0xDB67EF);
+constexpr KDColor PopupBackground = KDColor::RGB24(0x262626);
+constexpr KDColor PopupButtonBackground = KDColor::RGB24(0xFF0032);
 
 #endif
